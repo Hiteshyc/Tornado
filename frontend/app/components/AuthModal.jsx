@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-
+import { loginUser, registerUser } from "./libs/api";
 
 export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
   const [mode, setMode] = useState("login"); // "login" | "register"
