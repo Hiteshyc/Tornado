@@ -23,6 +23,11 @@ const userSchema = new mongoose.Schema(
       required: true,
       select: false, // never return by default on queries
     },
+    salt: {
+      type: String,
+      required: true,
+      select: false, // sensitive, hidden by default like passwordHash
+    },
     role: {
       type: String,
       enum: ["user", "admin"],
@@ -49,7 +54,7 @@ const userSchema = new mongoose.Schema(
       default: null,
     },
   },
-  { timestamps: true } // adds createdAt, updatedAt
+  { timestamps: true }, // adds createdAt, updatedAt
 );
 
 const User = mongoose.model("User", userSchema);

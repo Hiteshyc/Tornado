@@ -3,7 +3,7 @@ import User from "../models/User.js";
 export const userRepository = {
   findByEmail(email, withPassword = false) {
     const query = User.findOne({ email });
-    return withPassword ? query.select("+passwordHash") : query;
+    return withPassword ? query.select("+passwordHash +salt") : query;
   },
 
   findById(id) {
@@ -18,7 +18,7 @@ export const userRepository = {
     return User.findByIdAndUpdate(
       userId,
       { $inc: { failedLoginAttempts: 1 } },
-      { new: true }
+      { new: true },
     );
   },
 
@@ -26,7 +26,7 @@ export const userRepository = {
     return User.findByIdAndUpdate(
       userId,
       { accountLockedUntil: lockUntilDate },
-      { new: true }
+      { new: true },
     );
   },
 
@@ -38,7 +38,7 @@ export const userRepository = {
         accountLockedUntil: null,
         lastLogin: new Date(),
       },
-      { new: true }
+      { new: true },
     );
   },
 };
