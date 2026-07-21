@@ -14,6 +14,26 @@ export const loginSchema = Joi.object({
   password: Joi.string().required(),
 });
 
+export const forgotPasswordSchema = Joi.object({
+  email: Joi.string().email().required(),
+});
+
+export const verifyOtpSchema = Joi.object({
+  email: Joi.string().email().required(),
+  otp: Joi.string()
+    .pattern(/^\d{6}$/)
+    .required()
+    .messages({ "string.pattern.base": '"otp" must be a 6-digit number' }),
+});
+
+export const resetPasswordSchema = Joi.object({
+  resetToken: Joi.string().required(),
+  newPassword: Joi.string().min(6).max(128).required(),
+  confirmNewPassword: Joi.valid(Joi.ref("newPassword")).required().messages({
+    "any.only": "Passwords do not match",
+  }),
+});
+
 export function validate(schema) {
   return (req, res, next) => {
     const { error } = schema.validate(req.body, { abortEarly: false });

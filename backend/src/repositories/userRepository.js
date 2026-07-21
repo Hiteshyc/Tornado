@@ -41,4 +41,18 @@ export const userRepository = {
       { new: true },
     );
   },
+
+  updatePassword(userId, passwordHash, salt) {
+    return User.findByIdAndUpdate(
+      userId,
+      {
+        passwordHash,
+        salt,
+        failedLoginAttempts: 0,
+        accountLockedUntil: null,
+        lastLogin: new Date(),
+      },
+      { new: true },
+    );
+  },
 };

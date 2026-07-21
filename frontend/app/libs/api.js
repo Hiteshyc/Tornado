@@ -1,17 +1,18 @@
+async function handleResponse(res) {
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.message || "Something went wrong");
+  }
+  return data;
+}
+
 export async function loginUser({ email, password }) {
   const res = await fetch("/api/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
   });
-
-  const data = await res.json().catch(() => ({}));
-
-  if (!res.ok) {
-    throw new Error(data.message || "Login failed");
-  }
-
-  return data;
+  return handleResponse(res);
 }
 
 export async function registerUser({ name, email, password }) {
@@ -20,12 +21,36 @@ export async function registerUser({ name, email, password }) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, email, password }),
   });
+  return handleResponse(res);
+}
 
-  const data = await res.json().catch(() => ({}));
+export async function forgotPassword({ email }) {
+  const res = await fetch("/api/auth/forgot-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  return handleResponse(res); // { message }
+}
 
-  if (!res.ok) {
-    throw new Error(data.message || "Registration failed");
-  }
+export async function verifyOtp({ email, otp }) {
+  const res = await fetch("/api/auth/verify-otp", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, otp }),
+  });
+  return handleResponse(res); // { resetToken }
+}
 
-  return data;
+export async function resetPassword({
+  resetToken,
+  newPassword,
+  confirmNewPassword,
+}) {
+  const res = await fetch("/api/auth/reset-password", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ resetToken, newPassword, confirmNewPassword }),
+  });
+  return handleResponse(res); // { user }
 }

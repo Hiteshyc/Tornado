@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import { userRepository } from "../repositories/userRepository.js";
-import { generateAccessToken } from "../utils/generateToken.js";
+import { requestAccessToken } from "../utils/tokenClient.js";
 import { generateSalt } from "../utils/generateSalt.js";
 import { ApiError } from "../utils/ApiError.js";
 import { env } from "../config/env.js";
@@ -33,7 +33,7 @@ export const authService = {
     });
 
     // Step 6: Return success
-    const token = generateAccessToken(user._id);
+    const token = await requestAccessToken(user._id.toString(), user.role);
 
     return { user: sanitizeUser(user), token };
   },
@@ -83,7 +83,7 @@ export const authService = {
     // Successful login: reset attempts and update lastLogin
     await userRepository.resetLoginAttempts(user._id);
 
-    const token = generateAccessToken(user._id);
+    const token = await requestAccessToken(user._id.toString(), user.role);
 
     return { user: sanitizeUser(user), token };
   },
