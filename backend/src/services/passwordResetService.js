@@ -3,8 +3,10 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
 import { userRepository } from "../repositories/userRepository.js";
+import { refreshTokenRepository } from "../repositories/refreshTokenRepository.js";
 import { emailService } from "./emailService.js";
 import { generateSalt } from "../utils/generateSalt.js";
+import { generateRefreshToken } from "../utils/generateToken.js";
 import { requestAccessToken } from "../utils/tokenClient.js";
 import { ApiError } from "../utils/ApiError.js";
 import { env } from "../config/env.js";
@@ -150,12 +152,21 @@ export const passwordResetService = {
     // Persist new password, reset lock state, update lastLogin
     await userRepository.updatePassword(user._id, newPasswordHash, newSalt);
 
-    // Issue a full session access token — user is now logged in
+    // Issue access token
     const token = await requestAccessToken(user._id.toString(), user.role);
+
+    // Issue refresh token: rotate any existing sessions
+    const rawRefreshToken = generateRefreshToken(user._id.toString());
+    const refreshExpiresAt = new Date(
+      Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+    );
+    await refreshTokenRepository.revokeByUserId(user._id);
+    await refreshTokenRepository.create(user._id, rawRefreshToken, refreshExpiresAt);
 
     return {
       user: sanitizeUser(user),
       token,
+      refreshToken: rawRefreshToken,
     };
   },
 };

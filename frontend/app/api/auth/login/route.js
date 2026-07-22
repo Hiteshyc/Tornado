@@ -22,17 +22,25 @@ export async function POST(request) {
       );
     }
 
-    const response = NextResponse.json({ user: data.user });
+    const response = NextResponse.json({ user: data.user, token: data.token });
 
-    // If your Express backend returns a JWT in the body,
-    // set it as an httpOnly cookie here so the browser JS never touches it.
     if (data.token) {
       response.cookies.set("token", data.token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
         path: "/",
-        maxAge: 60 * 60 * 24 * 7, // 7 days
+        maxAge: 60 * 15, // 15 minutes access token cookie
+      });
+    }
+
+    if (data.refreshToken) {
+      response.cookies.set("refreshToken", data.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 7, // 7 days refresh token cookie
       });
     }
 

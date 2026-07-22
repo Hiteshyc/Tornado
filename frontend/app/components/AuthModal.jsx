@@ -110,10 +110,6 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
       const data =
         mode === "login" ? await loginUser(form) : await registerUser(form);
 
-      if (data.token) {
-        localStorage.setItem("token", data.token);
-      }
-
       onLoginSuccess(data.user);
       resetLocalState();
     } catch (err) {
@@ -174,11 +170,6 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
         newPassword,
         confirmNewPassword,
       });
-
-      // Store the session token exactly as login/register does
-      if (data.token) {
-        localStorage.setItem("token", data.token);
-      }
 
       // Password updated successfully — log the user in directly
       onLoginSuccess(data.user);

@@ -22,7 +22,7 @@ export async function POST(request) {
       );
     }
 
-    const response = NextResponse.json({ user: data.user });
+    const response = NextResponse.json({ user: data.user, token: data.token });
 
     if (data.token) {
       response.cookies.set("token", data.token, {
@@ -30,7 +30,17 @@ export async function POST(request) {
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
         path: "/",
-        maxAge: 60 * 60 * 24 * 7,
+        maxAge: 60 * 15, // 15 minutes access token cookie
+      });
+    }
+
+    if (data.refreshToken) {
+      response.cookies.set("refreshToken", data.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 7, // 7 days refresh token cookie
       });
     }
 

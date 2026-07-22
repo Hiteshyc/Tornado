@@ -5,6 +5,7 @@ import {
   verifyOtp,
   resetPassword,
 } from "../controllers/passwordResetController.js";
+import { refresh } from "../controllers/refreshController.js";
 import {
   validate,
   registerSchema,
@@ -18,6 +19,7 @@ const router = Router();
 
 router.post("/register", validate(registerSchema), register);
 router.post("/login", validate(loginSchema), login);
+router.post("/refresh", refresh);
 
 router.post("/forgot-password", validate(forgotPasswordSchema), forgotPassword);
 router.post("/verify-otp", validate(verifyOtpSchema), verifyOtp);
