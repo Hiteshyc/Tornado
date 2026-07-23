@@ -6,7 +6,7 @@ export async function POST(request) {
 
     if (!refreshToken) {
       return NextResponse.json(
-        { message: "No refresh token available" },
+        { message: "Session expired. Please log in again." },
         { status: 401 }
       );
     }

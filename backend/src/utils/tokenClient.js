@@ -1,5 +1,14 @@
+import crypto from "crypto";
 import { env } from "../config/env.js";
 import { ApiError } from "../utils/ApiError.js";
+
+/**
+ * Computes the SHA-256 hash of the internal API secret so that
+ * the raw secret is never sent in plaintext over HTTP headers.
+ */
+function getHashedSecret() {
+  return crypto.createHash("sha256").update(env.internalApiSecret).digest("hex");
+}
 
 /**
  * Calls the server's own internal-only /api/internal/token/access route
@@ -13,7 +22,7 @@ export async function requestAccessToken(userId, role) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-internal-secret": env.internalApiSecret,
+        "x-internal-secret": getHashedSecret(),
       },
       body: JSON.stringify({ userId, role }),
     },
@@ -30,3 +39,4 @@ export async function requestAccessToken(userId, role) {
 
   return data.accessToken;
 }
+

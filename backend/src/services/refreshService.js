@@ -16,7 +16,7 @@ export const refreshService = {
     try {
       payload = jwt.verify(rawRefreshToken, jwtConfig.refreshToken.secret);
     } catch {
-      throw new ApiError(401, "Refresh token is invalid or expired. Please log in again.");
+      throw new ApiError(401, "Session has expired. Please log in again.");
     }
 
     const userId = payload.id;

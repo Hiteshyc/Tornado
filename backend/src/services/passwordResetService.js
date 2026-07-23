@@ -40,7 +40,7 @@ export const passwordResetService = {
       // Return generic success to prevent email enumeration
       return {
         message:
-          "If an account with that email exists, a code has been sent.",
+          "No account with this email exists.",
       };
     }
 
@@ -61,7 +61,7 @@ export const passwordResetService = {
     await emailService.sendOtpEmail(normalizedEmail, otp);
 
     return {
-      message: "If an account with that email exists, a code has been sent.",
+      message: "A code has been sent to your email.",
     };
   },
 
