@@ -7,6 +7,7 @@ export const env = {
   nodeEnv: process.env.NODE_ENV || "development",
 
   mongoUri: process.env.MONGO_URI_LOGIN,
+  mongoUriReports: process.env.MONGO_URI_REPORTS,
 
   jwtSecret: process.env.JWT_SECRET,
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || "7d",
