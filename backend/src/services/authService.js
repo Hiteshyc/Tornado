@@ -105,6 +105,14 @@ export const authService = {
 
     return { user: sanitizeUser(user), token, refreshToken };
   },
+
+  async logout(userId) {
+    if (!userId) {
+      throw new ApiError(400, "User ID is required for logout");
+    }
+    // Revoke all active refresh tokens for the user in the database
+    await refreshTokenRepository.revokeByUserId(userId);
+  },
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -141,5 +149,10 @@ function sanitizeUser(user) {
     isVerified: user.isVerified,
     profileImage: user.profileImage,
     lastLogin: user.lastLogin,
+    preferences: user.preferences || { theme: "light" },
+    isOnboarded: user.isOnboarded || false,
+    locationConsent: user.locationConsent || false,
+    address: user.address || null,
+    location: user.location || null,
   };
 }
