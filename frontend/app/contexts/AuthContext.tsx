@@ -32,6 +32,25 @@ export interface AuthUser {
   name?: string;
   /** Email address — populated from profile fetch. */
   email?: string;
+  /** Contact phone number. */
+  phone?: string;
+  /** Verification onboarding status. Locks out dashboard if false. */
+  isOnboarded?: boolean;
+  /** Stores user consent to query geolocator silently on future logins. */
+  locationConsent?: boolean;
+  /** Combined address details. */
+  address?: {
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    formattedAddress: string;
+  } | null;
+  /** GeoJSON Point containing latitude/longitude coordinates. */
+  location?: {
+    type: string;
+    coordinates: number[];
+  } | null;
   /** URL to the user's avatar image, or null if none uploaded. */
   profileImage?: string | null;
   /** Persisted UI preferences — populated from profile fetch. */

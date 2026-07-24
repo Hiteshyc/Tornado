@@ -21,7 +21,8 @@
  */
 
 import { ThemeProvider } from "./contexts/ThemeContext";
-import { AuthProvider, type AuthUser } from "./contexts/AuthContext";
+import { AuthProvider, type AuthUser, useAuth } from "./contexts/AuthContext";
+import OnboardingModal from "./components/OnboardingModal";
 import type { ReactNode } from "react";
 
 interface ProvidersProps {
@@ -35,6 +36,23 @@ interface ProvidersProps {
    * on the very first client render with no async fetch required.
    */
   initialUser?: Pick<AuthUser, "id" | "role"> | null;
+}
+
+/**
+ * OnboardingWrapper
+ *
+ * Client-side gatekeeper component. If a user session is active (user is logged in)
+ * but the user has not completed onboarding (isOnboarded is false), this wrapper
+ * forces the non-dismissible OnboardingModal to mount, blocking dashboard access.
+ */
+function OnboardingWrapper({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  return (
+    <>
+      {children}
+      {user && !user.isOnboarded && <OnboardingModal isOpen={true} />}
+    </>
+  );
 }
 
 /**
@@ -59,7 +77,10 @@ export default function Providers({ children, initialUser }: ProvidersProps) {
        * It defaults to "light" (SSR-safe) and updates to the user's saved
        * theme preference once user.preferences.theme is populated after login.
        */}
-      <ThemeProvider>{children}</ThemeProvider>
+      <ThemeProvider>
+        <OnboardingWrapper>{children}</OnboardingWrapper>
+      </ThemeProvider>
     </AuthProvider>
   );
 }
+

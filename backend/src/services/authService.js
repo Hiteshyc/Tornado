@@ -150,5 +150,9 @@ function sanitizeUser(user) {
     profileImage: user.profileImage,
     lastLogin: user.lastLogin,
     preferences: user.preferences || { theme: "light" },
+    isOnboarded: user.isOnboarded || false,
+    locationConsent: user.locationConsent || false,
+    address: user.address || null,
+    location: user.location || null,
   };
 }

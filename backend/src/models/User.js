@@ -60,9 +60,37 @@ const userSchema = new mongoose.Schema(
         default: "light",
       },
     },
+    isOnboarded: {
+      type: Boolean,
+      default: false,
+    },
+    locationConsent: {
+      type: Boolean,
+      default: false,
+    },
+    address: {
+      street: String,
+      city: String,
+      state: String,
+      zipCode: String,
+      formattedAddress: String,
+    },
+    location: {
+      type: {
+        type: String,
+        enum: ["Point"],
+        default: "Point",
+      },
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+      },
+    },
   },
   { timestamps: true }, // adds createdAt, updatedAt
 );
+
+// Create geospatial 2dsphere index on location field for emergency map radius queries
+userSchema.index({ location: "2dsphere" });
 
 const User = mongoose.model("User", userSchema);
 

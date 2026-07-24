@@ -175,3 +175,26 @@ export async function updatePreferences({ theme }) {
   // });
 }
 
+/**
+ * submitOnboarding
+ *
+ * Submits the user's phone, address, coordinates, and theme preferences to the
+ * Next.js onboarding proxy route, which forwards it to the Express backend.
+ *
+ * @param {Object} data - onboarding dataset
+ * @param {string} data.phone - contact number
+ * @param {Object} data.address - street, city, state, zipCode
+ * @param {Object} [data.coordinates] - lat, lng (optional if location was denied)
+ * @param {Object} [data.preferences] - theme (optional)
+ * @returns {Promise<{ message: string, user: AuthUser }>}
+ */
+export async function submitOnboarding(data) {
+  const res = await fetch("/api/user/onboarding", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(res);
+}
+
+
