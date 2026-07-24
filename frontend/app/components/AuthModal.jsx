@@ -13,7 +13,7 @@ import {
 export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
   const [mode, setMode] = useState("login");
 
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "" });
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
@@ -59,7 +59,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
   if (!isOpen) return null;
 
   function resetLocalState() {
-    setForm({ name: "", email: "", password: "" });
+    setForm({ name: "", email: "", phone: "", password: "" });
     setOtp("");
     setNewPassword("");
     setConfirmNewPassword("");
@@ -97,7 +97,14 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
   }
 
   function handleChange(e) {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    let sanitized = value;
+    if (name === "name") {
+      sanitized = value.replace(/[^a-zA-Z\s]/g, "");
+    } else if (name === "phone") {
+      sanitized = value.replace(/[^0-9+\-\s]/g, "");
+    }
+    setForm({ ...form, [name]: sanitized });
   }
 
   // ---- Login / Register ----
@@ -239,10 +246,23 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
             {mode === "register" && (
               <input
                 name="name"
-                placeholder="Name"
+                placeholder="Full Name"
                 value={form.name}
                 onChange={handleChange}
                 required
+                className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
+              />
+            )}
+            {mode === "register" && (
+              <input
+                name="phone"
+                type="tel"
+                placeholder="Phone Number *"
+                value={form.phone}
+                onChange={handleChange}
+                required
+                pattern="[0-9+\-\s]{7,15}"
+                title="Enter a valid phone number (7–15 digits)"
                 className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
               />
             )}

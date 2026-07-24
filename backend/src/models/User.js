@@ -18,6 +18,11 @@ const userSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    userCode: {
+      type: String,
+      unique: true,
+      // e.g. "WS-A3K9X2" — generated at registration, shown on profile
+    },
     passwordHash: {
       type: String,
       required: true,

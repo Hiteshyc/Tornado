@@ -61,11 +61,11 @@ export async function loginUser({ email, password }) {
   return handleResponse(res);
 }
 
-export async function registerUser({ name, email, password }) {
+export async function registerUser({ name, email, phone, password }) {
   const res = await fetch("/api/auth/register", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, email, password }),
+    body: JSON.stringify({ name, email, phone, password }),
   });
   return handleResponse(res);
 }

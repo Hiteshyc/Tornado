@@ -6,6 +6,21 @@ import { generateRefreshToken } from "../utils/generateToken.js";
 import { generateSalt } from "../utils/generateSalt.js";
 import { ApiError } from "../utils/ApiError.js";
 import { env } from "../config/env.js";
+import User from "../models/User.js";
+
+/** Generate a unique human-readable user code e.g. "WS-A3K9X2" */
+async function generateUserCode() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no confusable chars (0,O,1,I)
+  let code, exists;
+  do {
+    const random = Array.from({ length: 6 }, () =>
+      chars[Math.floor(Math.random() * chars.length)]
+    ).join("");
+    code = `WS-${random}`;
+    exists = await User.findOne({ userCode: code });
+  } while (exists); // retry on collision (extremely rare)
+  return code;
+}
 
 const BCRYPT_COST_FACTOR = env.bcryptCostFactor; // 12
 
@@ -35,12 +50,14 @@ export const authService = {
     const passwordHash = await bcrypt.hash(password + salt, BCRYPT_COST_FACTOR);
 
     // Step 5: Store user
+    const userCode = await generateUserCode();
     const user = await userRepository.create({
       name,
       email,
       phone,
       passwordHash,
       salt,
+      userCode,
     });
 
     // Step 6: Issue access token
@@ -134,6 +151,7 @@ async function issueAndStoreRefreshToken(userId) {
 function sanitizeUser(user) {
   return {
     id: user._id,
+    userCode: user.userCode,
     name: user.name,
     email: user.email,
     phone: user.phone,

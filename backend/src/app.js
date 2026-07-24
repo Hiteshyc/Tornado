@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import mongoSanitize from "express-mongo-sanitize";
 
 import { env } from "./config/env.js";
 import { connectDB, connectReportsDB } from "./config/db.js";
@@ -20,6 +21,10 @@ app.use(
 );
 app.use(express.json());
 app.use(cookieParser());
+
+// Sanitize user-supplied data to prevent MongoDB NoSQL operator injection ($ or .)
+app.use(mongoSanitize());
+
 app.use("/api/internal/token", tokenRoutes);
 
 // Routes

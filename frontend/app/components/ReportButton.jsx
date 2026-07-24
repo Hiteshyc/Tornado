@@ -1,41 +1,51 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ReportModal from "./ReportModal";
 import AuthModal from "./AuthModal";
 
-/**
- * ReportButton
- *
- * Self-contained Report button.  Manages its own auth state so it works
- * correctly regardless of whether the parent passes a currentUser or not.
- *
- * Flow:
- *  - Not logged in  → gate screen → "Log In to Continue" opens AuthModal
- *                                    after login: reopens ReportModal at form
- *  - Logged in      → ReportModal opens directly at form (gate skipped)
- *
- * Props:
- *   currentUser – object | null  (optional, pass if parent already knows the user)
- *                 Shape: { _id, name, phone?, email? }
- */
-export default function ReportButton({ currentUser: initialUser = null }) {
+const STORAGE_KEY = "ws_user"; // same key used by AuthButton
+
+export default function ReportButton() {
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
-  // Internal user state — starts from whatever parent passes in
-  const [currentUser, setCurrentUser] = useState(initialUser);
+  const [currentUser, setCurrentUser] = useState(null);
 
-  // Called from the gate screen "Log In to Continue" button
+  // ── Read user from localStorage on mount (same source as AuthButton) ──────
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) setCurrentUser(JSON.parse(stored));
+    } catch {}
+  }, []);
+
+  // ── Listen for login/logout changes from AuthButton on other pages ─────────
+  useEffect(() => {
+    function onStorageChange(e) {
+      if (e.key === STORAGE_KEY) {
+        try {
+          setCurrentUser(e.newValue ? JSON.parse(e.newValue) : null);
+        } catch {
+          setCurrentUser(null);
+        }
+      }
+    }
+    window.addEventListener("storage", onStorageChange);
+    return () => window.removeEventListener("storage", onStorageChange);
+  }, []);
+
+  // Called from gate screen "Log In to Continue"
   function handleLoginRequired() {
-    setIsReportOpen(false); // close report modal first
-    setIsAuthOpen(true);    // open the existing AuthModal
+    setIsReportOpen(false);
+    setIsAuthOpen(true);
   }
 
-  // Called by AuthModal on successful login
+  // Called by embedded AuthModal on successful login
   function handleLoginSuccess(user) {
-    setCurrentUser(user);   // store the logged-in user
-    setIsAuthOpen(false);   // close auth modal
-    setIsReportOpen(true);  // reopen report modal — gate is now skipped
+    setCurrentUser(user);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(user)); } catch {}
+    setIsAuthOpen(false);
+    setIsReportOpen(true); // reopen — gate is now skipped
   }
 
   return (
@@ -48,7 +58,6 @@ export default function ReportButton({ currentUser: initialUser = null }) {
         Report
       </button>
 
-      {/* Report modal — passes onLoginRequired so gate button works */}
       <ReportModal
         isOpen={isReportOpen}
         onClose={() => setIsReportOpen(false)}
@@ -56,7 +65,6 @@ export default function ReportButton({ currentUser: initialUser = null }) {
         onLoginRequired={handleLoginRequired}
       />
 
-      {/* Auth modal — embedded here, opened only from the gate screen */}
       <AuthModal
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}

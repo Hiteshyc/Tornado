@@ -12,31 +12,49 @@ const userReportSchema = new mongoose.Schema(
       default: null,
     },
 
-    // ── Guest info (only filled when userId is null) ────────────────────────
-    guestName: {
+    // ── Reporter snapshot (always stored — self-contained, no join needed) ───
+    reporterName: {
       type: String,
       trim: true,
       default: null,
+      match: [/^[A-Za-z]+(?:[ '-][A-Za-z]+)*$/,"Please enter a valid name", ],
     },
-    guestContact: {
+    reporterPhone: {
+      type: Number,
+      trim: true,
+      default: null,
+    },
+    reporterEmail: {
       type: String,
       trim: true,
+      lowercase: true,
       default: null,
     },
 
-    // ── Location ─────────────────────────────────────────────────────────────
+    // ── Location & IP Tracking ────────────────────────────────────────────────
     location: {
-      type: String,   // human-readable address from reverse geocoding
+      type: String,   // 1) human-readable address (editable by user)
       required: true,
       trim: true,
     },
     locationCoords: {
-      lat: { type: Number, default: null },  // raw GPS latitude
-      lng: { type: Number, default: null },  // raw GPS longitude
+      lat: { type: Number, default: null },  // 2) latitude & longitude by GPS or address geocoding
+      lng: { type: Number, default: null },
     },
     locationAccuracy: {
-      type: Number,   // accuracy in metres (e.g. 8 means ±8m)
+      type: Number,   // accuracy in metres (e.g. ±15m if GPS used)
       default: null,
+    },
+
+    // Hidden internal fields (auto-captured on backend)
+    ipAddress: {
+      type: String,   // 3) client IP address
+      trim: true,
+      default: null,
+    },
+    ipCoords: {
+      lat: { type: Number, default: null },  // 4) latitude & longitude derived from IP address
+      lng: { type: Number, default: null },
     },
 
     // ── Landmark ──────────────────────────────────────────────────────────────

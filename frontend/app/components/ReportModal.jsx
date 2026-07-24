@@ -6,18 +6,84 @@ import { useState, useEffect, useRef } from "react";
 // Constants
 // ---------------------------------------------------------------------------
 const DISASTER_TYPES = [
-  "Flood",
-  "Cyclone",
-  "Tsunami",
-  "Landslide",
-  "Coastal Erosion",
-  "Storm Surge",
-  "Heavy Rainfall",
-  "Fire",
-  "Earthquake",
+  "Avalanche",
+  "Biological Hazard",
+  "Blizzard",
   "Building Collapse",
-  "Chemical Leak",
+  "Bushfire",
+  "Chemical Spill",
+  "Civil Unrest",
+  "Coastal Erosion",
+  "Coastal Flooding",
+  "Cold Wave",
+  "Cyclone",
+  "Cyberattack (Critical Infrastructure)",
+  "Dam Failure",
+  "Debris Flow",
+  "Desertification",
+  "Drought",
+  "Dust Storm",
+  "Earthquake",
+  "Epidemic",
+  "Explosion",
+  "Extreme Heat",
+  "Famine",
+  "Fire (Urban Fire)",
+  "Flash Flood",
+  "Flood",
+  "Forest Fire",
+  "Gas Leak",
+  "Glacial Lake Outburst Flood (GLOF)",
+  "Ground Subsidence",
+  "Hailstorm",
+  "Harmful Algal Bloom",
+  "Heatwave",
+  "Hurricane",
+  "Ice Storm",
+  "Industrial Accident",
+  "Infectious Disease Outbreak",
+  "Jellyfish Bloom",
+  "Kidnapping Crisis",
+  "Landslide",
+  "Lava Flow",
+  "Lightning Strike",
+  "Locust Infestation",
+  "Marine Pollution",
+  "Mine Collapse",
+  "Mudslide",
+  "Nuclear Accident",
   "Oil Spill",
+  "Pandemic",
+  "Power Grid Failure",
+  "Quicksand Incident",
+  "Radiation Leak",
+  "Rail Accident",
+  "River Flood",
+  "Road Accident",
+  "Rockfall",
+  "Sabotage",
+  "Sandstorm",
+  "Severe Storm",
+  "Sinkhole",
+  "Snowstorm",
+  "Stampede",
+  "Storm Surge",
+  "Structural Collapse",
+  "Terrorist Attack",
+  "Thunderstorm",
+  "Tornado",
+  "Toxic Gas Release",
+  "Transportation Accident",
+  "Tsunami",
+  "Typhoon",
+  "Urban Fire",
+  "Volcanic Ashfall",
+  "Volcanic Eruption",
+  "Water Contamination",
+  "Wildfire",
+  "Windstorm",
+  "Zoological Outbreak",
+  "Zoonotic Disease Outbreak",
   "Other",
 ];
 
@@ -30,11 +96,27 @@ const SEVERITY_LABELS = {
 };
 
 const SEVERITY_COLORS = {
-  1: "#22c55e",
-  2: "#84cc16",
-  3: "#f59e0b",
-  4: "#f97316",
-  5: "#ef4444",
+  1: "#1B5E20", // 1 - Dark Forest Green
+  2: "#689F38", // 2 - Lime / Light Olive Green
+  3: "#FDD835", // 3 - Vivid Warning Yellow
+  4: "#FB8C00", // 4 - Vivid Emergency Orange
+  5: "#B71C1C", // 5 - Dark Emergency Red
+};
+
+const SEVERITY_TEXT_COLORS = {
+  1: "#ffffff",
+  2: "#ffffff",
+  3: "#1a1a1a", // Dark text on bright yellow for high contrast
+  4: "#ffffff",
+  5: "#ffffff",
+};
+
+const SEVERITY_BG_LIGHT = {
+  1: "#e8f5e9",
+  2: "#f1f8e9",
+  3: "#fffde7",
+  4: "#fff3e0",
+  5: "#ffebee",
 };
 
 // ---------------------------------------------------------------------------
@@ -61,7 +143,8 @@ export default function ReportModal({ isOpen, onClose, currentUser, onLoginRequi
   const isLoggedIn = Boolean(currentUser);
 
   const [name, setName] = useState("");
-  const [contact, setContact] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
 
   // Location
   const [location, setLocation] = useState("");           // human-readable address
@@ -94,6 +177,7 @@ export default function ReportModal({ isOpen, onClose, currentUser, onLoginRequi
   const [mediaPreviews, setMediaPreviews] = useState([]);
   const fileInputRef = useRef(null);
   const dropRef = useRef(null);
+  const errorRef = useRef(null);
 
   // Disclaimer
   const [disclaimerAcknowledged, setDisclaimerAcknowledged] = useState(false);
@@ -103,6 +187,13 @@ export default function ReportModal({ isOpen, onClose, currentUser, onLoginRequi
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
+  // Auto-scroll to error message whenever submitError is set
+  useEffect(() => {
+    if (submitError && errorRef.current) {
+      errorRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [submitError]);
+
   // Disaster dropdown filtered list
   const filteredDisasters = DISASTER_TYPES.filter((d) =>
     d.toLowerCase().includes(disasterSearch.toLowerCase()),
@@ -110,13 +201,14 @@ export default function ReportModal({ isOpen, onClose, currentUser, onLoginRequi
 
   // ── Effects ───────────────────────────────────────────────────────────────
 
-  // Pre-fill from logged-in user
+  // Auto-fill name, phone, email from currentUser when logged in
   useEffect(() => {
-    if (isLoggedIn && currentUser) {
+    if (currentUser) {
       setName(currentUser.name || "");
-      setContact(currentUser.phone || currentUser.email || "");
+      setPhone(currentUser.phone || "");
+      setEmail(currentUser.email || "");
     }
-  }, [isLoggedIn, currentUser]);
+  }, [currentUser]);
 
   // Auto-skip gate if user is logged in
   useEffect(() => {
@@ -133,6 +225,88 @@ export default function ReportModal({ isOpen, onClose, currentUser, onLoginRequi
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
+  // ── Draft auto-save key ──────────────────────────────────────────────────
+  const DRAFT_KEY = "ws_report_form_draft";
+
+  // Restore draft from localStorage on initial load
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(DRAFT_KEY);
+      if (saved) {
+        const draft = JSON.parse(saved);
+        if (!currentUser && draft.name) setName(draft.name);
+        if (!currentUser && draft.phone) setPhone(draft.phone);
+        if (!currentUser && draft.email) setEmail(draft.email);
+        if (draft.location) {
+          setLocation(draft.location);
+          setLocationGranted(true);
+        }
+        if (draft.locationCoords) setLocationCoords(draft.locationCoords);
+        if (draft.locationAccuracy) setLocationAccuracy(draft.locationAccuracy);
+        if (draft.landmark) setLandmark(draft.landmark);
+        if (draft.disasterType) setDisasterType(draft.disasterType);
+        if (draft.customDisaster) setCustomDisaster(draft.customDisaster);
+        if (draft.severity) setSeverity(draft.severity);
+        if (draft.description) setDescription(draft.description);
+        if (typeof draft.rescueRequired === "boolean") setRescueRequired(draft.rescueRequired);
+        if (draft.rescueDetails) setRescueDetails(draft.rescueDetails);
+        if (typeof draft.disclaimerAcknowledged === "boolean")
+          setDisclaimerAcknowledged(draft.disclaimerAcknowledged);
+      }
+    } catch {}
+  }, [currentUser]);
+
+  // Auto-save form fields to localStorage whenever state changes
+  useEffect(() => {
+    // Only save if there's active content to preserve
+    if (
+      location ||
+      landmark ||
+      disasterType ||
+      severity ||
+      description ||
+      rescueRequired ||
+      disclaimerAcknowledged ||
+      (!isLoggedIn && (name || phone || email))
+    ) {
+      try {
+        const draftData = {
+          name: !isLoggedIn ? name : undefined,
+          phone: !isLoggedIn ? phone : undefined,
+          email: !isLoggedIn ? email : undefined,
+          location,
+          locationCoords,
+          locationAccuracy,
+          landmark,
+          disasterType,
+          customDisaster,
+          severity,
+          description,
+          rescueRequired,
+          rescueDetails,
+          disclaimerAcknowledged,
+        };
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(draftData));
+      } catch {}
+    }
+  }, [
+    isLoggedIn,
+    name,
+    phone,
+    email,
+    location,
+    locationCoords,
+    locationAccuracy,
+    landmark,
+    disasterType,
+    customDisaster,
+    severity,
+    description,
+    rescueRequired,
+    rescueDetails,
+    disclaimerAcknowledged,
+  ]);
+
   // Build media previews whenever files change
   useEffect(() => {
     const previews = mediaFiles.map((file) => ({
@@ -145,6 +319,34 @@ export default function ReportModal({ isOpen, onClose, currentUser, onLoginRequi
     // Cleanup object URLs on unmount / file change
     return () => previews.forEach((p) => URL.revokeObjectURL(p.url));
   }, [mediaFiles]);
+
+  // Geocode typed address if edited manually
+  useEffect(() => {
+    if (!location || locationGranted) return;
+
+    const timer = setTimeout(async () => {
+      if (location.trim().length < 4) return;
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location.trim())}&limit=1`,
+          { headers: { "Accept-Language": "en" } },
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            setLocationCoords({
+              lat: parseFloat(data[0].lat),
+              lng: parseFloat(data[0].lon),
+            });
+          }
+        }
+      } catch {
+        // Geocode network error ignored
+      }
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [location, locationGranted]);
 
   // ── Geolocation ───────────────────────────────────────────────────────────
   async function requestLocation() {
@@ -187,6 +389,8 @@ export default function ReportModal({ isOpen, onClose, currentUser, onLoginRequi
   }
 
   // ── Media handling ────────────────────────────────────────────────────────
+  const MAX_TOTAL_SIZE = 30 * 1024 * 1024; // 30 MB
+
   function handleFileSelect(e) {
     addFiles(Array.from(e.target.files));
   }
@@ -195,7 +399,14 @@ export default function ReportModal({ isOpen, onClose, currentUser, onLoginRequi
     const allowed = incoming.filter((f) =>
       /image\/(jpeg|jpg|png|webp)|video\/(mp4|quicktime|webm)/.test(f.type),
     );
-    setMediaFiles((prev) => [...prev, ...allowed]);
+
+    const oversized = allowed.filter((f) => f.size > MAX_TOTAL_SIZE);
+    if (oversized.length > 0) {
+      setSubmitError(`Some files exceed the 30MB size limit.`);
+    }
+
+    const validFiles = allowed.filter((f) => f.size <= MAX_TOTAL_SIZE);
+    setMediaFiles((prev) => [...prev, ...validFiles]);
   }
 
   function removeFile(index) {
@@ -222,9 +433,8 @@ export default function ReportModal({ isOpen, onClose, currentUser, onLoginRequi
   function resetAll() {
     setStep("gate");
     setName(isLoggedIn ? currentUser?.name || "" : "");
-    setContact(
-      isLoggedIn ? currentUser?.phone || currentUser?.email || "" : "",
-    );
+    setPhone(isLoggedIn ? currentUser?.phone || "" : "");
+    setEmail(isLoggedIn ? currentUser?.email || "" : "");
     setLocation("");
     setLocationGranted(false);
     setLandmark("");
@@ -242,6 +452,7 @@ export default function ReportModal({ isOpen, onClose, currentUser, onLoginRequi
     setSubmitError("");
     setSubmitSuccess(false);
     setSubmitting(false);
+    try { localStorage.removeItem(DRAFT_KEY); } catch {}
   }
 
   function handleClose() {
@@ -252,13 +463,20 @@ export default function ReportModal({ isOpen, onClose, currentUser, onLoginRequi
   // ── Validation & Submit ───────────────────────────────────────────────────
   function validate() {
     if (!disclaimerAcknowledged) return "Please acknowledge the disclaimer.";
-    if (!name.trim()) return "Name is required.";
-    if (!contact.trim()) return "Contact information is required.";
+    if (!name.trim()) return "Full name is required.";
+    if (!phone.trim()) return "Phone number is required.";
+    if (!/^[0-9+\-\s]{7,15}$/.test(phone.trim())) return "Enter a valid phone number.";
     if (!location.trim()) return "Location is required.";
-    if (!disasterType) return "Disaster type is required.";
-    if (disasterType === "Other" && !customDisaster.trim())
+    if (!disasterType && !customDisaster)
       return "Please specify the disaster type.";
     if (!severity) return "Severity rating is required.";
+
+    // Check media file sizes
+    const totalSize = mediaFiles.reduce((sum, f) => sum + f.size, 0);
+    if (totalSize > MAX_TOTAL_SIZE) {
+      return "Total media size cannot exceed 30MB.";
+    }
+
     return null;
   }
 
@@ -274,39 +492,63 @@ export default function ReportModal({ isOpen, onClose, currentUser, onLoginRequi
 
     setSubmitting(true);
 
-    // Build payload — backend auto-captures submittedAt
+    // Build payload — backend reads reporter info from req.user (logged-in) or falls back to these fields
     const payload = {
-      guestName: isLoggedIn ? null : name,
-      guestContact: isLoggedIn ? null : contact,
+      // Reporter fields (sent as fallback in case authentication is not present)
+      guestName:    name || undefined,
+      guestContact: phone || undefined,
+      guestEmail:   email || undefined,
+      // Location
       location,
-      locationCoords: locationCoords || null,
+      locationCoords:   locationCoords || null,
       locationAccuracy: locationAccuracy || null,
-      landmark: landmark || null,
+      landmark:         landmark || null,
+      // Incident
       disasterType: disasterType === "Other" ? customDisaster : disasterType,
       severity,
-      description: description || null,
+      description:    description || null,
       rescueRequired,
-      rescueDetails: rescueRequired ? rescueDetails || null : null,
+      rescueDetails:  rescueRequired ? rescueDetails || null : null,
     };
+
+    // Build FormData — send JSON payload as "data" field + files as "media"
+    const formData = new FormData();
+    formData.append("data", JSON.stringify(payload));
+    mediaFiles.forEach((file) => formData.append("media", file));
 
     try {
       const res = await fetch("/api/reports", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-        credentials: "include", // sends httpOnly token cookie for logged-in users
+        // Do NOT set Content-Type — browser sets it automatically with the multipart boundary
+        body: formData,
+        credentials: "include",
       });
 
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        setSubmitError(data.message || "Failed to submit report. Please try again.");
+        if (res.status === 413) {
+          setSubmitError("The uploaded media exceeds the maximum allowed size (30MB).");
+        } else if (res.status === 500) {
+          setSubmitError("Server error occurred while processing your report. Please try again shortly.");
+        } else if (res.status === 401 || res.status === 403) {
+          setSubmitError("Session authorization issue. Please try logging in again or submitting as a guest.");
+        } else {
+          setSubmitError(data.message || `Failed to submit report (Status code ${res.status}). Please try again.`);
+        }
         return;
       }
 
+      try { localStorage.removeItem(DRAFT_KEY); } catch {}
       setSubmitSuccess(true);
-    } catch {
-      setSubmitError("Network error. Please check your connection and try again.");
+    } catch (err) {
+      if (!navigator.onLine) {
+        setSubmitError("You are currently offline. Please check your internet connection and try again.");
+      } else if (err.name === "AbortError") {
+        setSubmitError("The upload request timed out due to a slow connection. Please try again.");
+      } else {
+        setSubmitError("Unable to connect to the server. Please check your internet connection or try again shortly.");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -434,6 +676,13 @@ export default function ReportModal({ isOpen, onClose, currentUser, onLoginRequi
           onSubmit={handleSubmit}
           className="flex-1 overflow-y-auto px-6 py-5 space-y-6"
         >
+          {/* Top error banner */}
+          {submitError && (
+            <div className="flex items-center gap-2.5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700 shadow-sm">
+              <span className="text-lg">⚠️</span>
+              <span>{submitError}</span>
+            </div>
+          )}
           {/* 1. DISCLAIMER */}
           <section className="rounded-xl border border-amber-200 bg-amber-50 p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 mb-1">
@@ -463,9 +712,9 @@ export default function ReportModal({ isOpen, onClose, currentUser, onLoginRequi
             <input
               type="text"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => setName(e.target.value.replace(/[^a-zA-Z\s]/g, ""))}
               readOnly={isLoggedIn}
-              placeholder="Your full name"
+              placeholder="Your full name (letters only)"
               className={`w-full rounded-lg border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black transition ${
                 isLoggedIn
                   ? "bg-gray-50 text-gray-500 cursor-not-allowed"
@@ -479,17 +728,17 @@ export default function ReportModal({ isOpen, onClose, currentUser, onLoginRequi
             )}
           </section>
 
-          {/* 3. CONTACT */}
+          {/* 3. PHONE */}
           <section>
             <label className="block text-sm font-semibold text-gray-700 mb-1">
-              Contact Information <span className="text-red-500">*</span>
+              Phone Number <span className="text-red-500">*</span>
             </label>
             <input
-              type="text"
-              value={contact}
-              onChange={(e) => setContact(e.target.value)}
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value.replace(/[^0-9+\-\s]/g, ""))}
               readOnly={isLoggedIn}
-              placeholder="Phone number or email"
+              placeholder="e.g. 9876543210 (digits only)"
               className={`w-full rounded-lg border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black transition ${
                 isLoggedIn
                   ? "bg-gray-50 text-gray-500 cursor-not-allowed"
@@ -497,9 +746,30 @@ export default function ReportModal({ isOpen, onClose, currentUser, onLoginRequi
               }`}
             />
             {isLoggedIn && (
-              <p className="mt-1 text-xs text-gray-400">
-                Auto-filled from your account
-              </p>
+              <p className="mt-1 text-xs text-gray-400">Auto-filled from your account</p>
+            )}
+          </section>
+
+          {/* 3b. EMAIL (optional) */}
+          <section>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              Email{" "}
+              <span className="font-normal text-gray-400">(optional)</span>
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              readOnly={isLoggedIn}
+              placeholder="your@email.com"
+              className={`w-full rounded-lg border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black transition ${
+                isLoggedIn
+                  ? "bg-gray-50 text-gray-500 cursor-not-allowed"
+                  : "bg-white"
+              }`}
+            />
+            {isLoggedIn && (
+              <p className="mt-1 text-xs text-gray-400">Auto-filled from your account</p>
             )}
           </section>
 
@@ -538,17 +808,23 @@ export default function ReportModal({ isOpen, onClose, currentUser, onLoginRequi
                 </button>
               </div>
             )}
-            {locationGranted && locationCoords && (
+            {locationCoords && (
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">
-                  ✓ GPS detected
-                </span>
-                {locationAccuracy && (
+                {locationGranted ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">
+                    ✓ GPS detected
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-700">
+                    🔍 Geocoded from address
+                  </span>
+                )}
+                {locationGranted && locationAccuracy && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700">
                     ± {locationAccuracy}m accuracy
                   </span>
                 )}
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-gray-400 font-mono">
                   {locationCoords.lat.toFixed(5)}, {locationCoords.lng.toFixed(5)}
                 </span>
               </div>
@@ -639,14 +915,18 @@ export default function ReportModal({ isOpen, onClose, currentUser, onLoginRequi
                         ? {
                             backgroundColor: SEVERITY_COLORS[level],
                             borderColor: SEVERITY_COLORS[level],
-                            color: "#fff",
+                            color: SEVERITY_TEXT_COLORS[level],
                           }
-                        : {}
+                        : {
+                            backgroundColor: SEVERITY_BG_LIGHT[level],
+                            borderColor: `${SEVERITY_COLORS[level]}50`,
+                            color: level === 3 ? "#856404" : SEVERITY_COLORS[level],
+                          }
                     }
-                    className={`flex-1 rounded-lg border py-2.5 text-sm font-semibold transition ${
+                    className={`flex-1 rounded-lg border-2 py-2.5 text-sm font-bold transition-all ${
                       severity === level
-                        ? "shadow-md"
-                        : "border-gray-200 text-gray-600 hover:border-gray-400"
+                        ? "shadow-md scale-105"
+                        : "opacity-80 hover:opacity-100"
                     }`}
                   >
                     {level}
@@ -775,11 +1055,15 @@ export default function ReportModal({ isOpen, onClose, currentUser, onLoginRequi
             )}
           </section>
 
-          {/* Error message */}
+          {/* Error message with auto-scroll ref */}
           {submitError && (
-            <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">
-              {submitError}
-            </p>
+            <div
+              ref={errorRef}
+              className="flex items-center gap-2.5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700 shadow-sm animate-pulse"
+            >
+              <span className="text-lg">⚠️</span>
+              <span>{submitError}</span>
+            </div>
           )}
         </form>
 
