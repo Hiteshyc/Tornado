@@ -5,20 +5,20 @@ export async function POST(request) {
     const body = await request.json();
 
     const backendRes = await fetch(
-      `${process.env.BACKEND_API_URL}/api/auth/register`,
+      `${process.env.BACKEND_API_URL}/api/auth/reset-password`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
-      },
+      }
     );
 
     const data = await backendRes.json().catch(() => ({}));
 
     if (!backendRes.ok) {
       return NextResponse.json(
-        { message: data.message || "Registration failed" },
-        { status: backendRes.status },
+        { message: data.message || "Could not reset password" },
+        { status: backendRes.status }
       );
     }
 
@@ -48,7 +48,7 @@ export async function POST(request) {
   } catch (err) {
     return NextResponse.json(
       { message: "Something went wrong. Please try again." },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
