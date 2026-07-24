@@ -15,7 +15,7 @@ import Alert from "./models/Alert.js";
 import Announcement from "./models/Announcement.js";
 import SafetyGuide from "./models/SafetyGuide.js";
 
-const MONGO_URI = process.env.MONGO_URI;
+const MONGO_URI = process.env.MONGO_URI || process.env.MONGO_URI_LOGIN;
 
 // ── Seed data ─────────────────────────────────────────────────────────────────
 
@@ -230,8 +230,11 @@ const safetyGuidesData = [
 
 // ── Run seed ──────────────────────────────────────────────────────────────────
 
+import dns from "dns";
+
 async function seed() {
   try {
+    dns.setServers(["8.8.8.8", "1.1.1.1"]);
     await mongoose.connect(MONGO_URI);
     console.log("✅ Connected to MongoDB");
 

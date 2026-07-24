@@ -2,16 +2,16 @@
 
 import { ChevronLeft } from 'lucide-react'
 import type { SafetyGuide } from '../../types'
-import { safetyGuides } from '../../data/mockData'
+import { useData } from '../../context/DataContext'
 
 interface SafetyGuidePanelProps {
   onBack: () => void
   onSelectGuide: (guide: SafetyGuide) => void
 }
 
-const categories = safetyGuides.map(g => ({ key: g.key, label: g.title, icon: g.icon }))
-
 export default function SafetyGuidePanel({ onBack, onSelectGuide }: SafetyGuidePanelProps) {
+  const { safetyGuides } = useData()
+  const categories = safetyGuides.map(g => ({ key: g.key, label: g.title, icon: g.icon }))
   return (
     <div className="flex flex-col h-full anim-slide-right">
       {/* Header */}

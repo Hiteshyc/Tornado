@@ -100,3 +100,27 @@ export async function resetPassword({
   });
   return handleResponse(res);
 }
+
+export async function getAlerts(severity = "all") {
+  const res = await fetch(`/api/alerts?severity=${severity}`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  return handleResponse(res);
+}
+
+export async function getAnnouncements() {
+  const res = await fetch("/api/announcements", {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  return handleResponse(res);
+}
+
+export async function getSafetyGuides() {
+  const res = await fetch("/api/safety-guides", {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  return handleResponse(res);
+}

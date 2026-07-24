@@ -5,7 +5,7 @@ import { ArrowLeft, MapPin, Clock, AlertTriangle, ExternalLink } from 'lucide-re
 import { useRouter } from 'next/navigation'
 import type { Severity } from '../types'
 import { SEVERITY_HEX, SEVERITY_LABEL } from '../types'
-import { alerts } from '../data/mockData'
+import { useData } from '../context/DataContext'
 
 // ── Severity badge ──────────────────────────────────────────
 function SevBadge({ severity }: { severity: Severity }) {
@@ -24,6 +24,7 @@ function SevBadge({ severity }: { severity: Severity }) {
 
 export default function AlertsPage() {
   const router = useRouter()
+  const { alerts } = useData()
   const [filter, setFilter] = useState<Severity | 'all'>('all')
   const severities: Array<Severity | 'all'> = ['all', 'critical', 'high', 'moderate', 'low', 'safe']
 

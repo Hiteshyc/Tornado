@@ -3,7 +3,7 @@
 import { ChevronLeft, Clock } from 'lucide-react'
 import type { Announcement, Severity } from '../../types'
 import { SEVERITY_HEX } from '../../types'
-import { announcements } from '../../data/mockData'
+import { useData } from '../../context/DataContext'
 
 interface AnnouncementsPanelProps {
   onBack: () => void
@@ -19,6 +19,7 @@ const BADGE_COLORS: Record<string, string> = {
 }
 
 export default function AnnouncementsPanel({ onBack, onSelectAnnouncement }: AnnouncementsPanelProps) {
+  const { announcements } = useData()
   return (
     <div className="flex flex-col h-full anim-slide-right">
       {/* Header */}

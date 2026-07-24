@@ -6,7 +6,7 @@ import {
 } from 'lucide-react'
 import type { SituationStatus, SidebarView } from '../../types'
 import { SEVERITY_HEX } from '../../types'
-import { currentSituation, alerts, announcements } from '../../data/mockData'
+import { useData } from '../../context/DataContext'
 
 interface MainPanelProps {
   onNavigate: (view: SidebarView) => void
@@ -21,6 +21,7 @@ function getSituationBg(status: SituationStatus['status']) {
 
 export default function MainPanel({ onNavigate, onReportClick }: MainPanelProps) {
   const router = useRouter()
+  const { currentSituation, alerts, announcements, loading } = useData()
   const sit = currentSituation
   const sitStyle = getSituationBg(sit.status)
 
