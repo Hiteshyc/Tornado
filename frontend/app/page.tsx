@@ -18,31 +18,6 @@ export default function Home() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden" style={{ background: 'var(--bg)' }}>
-      {/* ── Top bar placeholder (Header component will go here) ── */}
-      <div
-        className="shrink-0 flex items-center justify-between px-5 border-b"
-        style={{
-          height: 'var(--header-h)',
-          background: 'var(--bg-panel)',
-          borderColor: 'var(--border)',
-        }}
-      >
-        <div className="flex items-center gap-2">
-          <span className="text-xl">🌀</span>
-          <span className="text-sm font-bold" style={{ color: 'var(--fg)' }}>Tornado</span>
-          <span
-            className="text-[9px] font-mono px-1.5 py-0.5 rounded"
-            style={{ background: 'var(--primary)' + '18', color: 'var(--primary)', fontFamily: 'var(--font-mono)' }}
-          >
-            LIVE
-          </span>
-        </div>
-        {/* Navbar slot — Header component by another team member */}
-        <div className="text-xs" style={{ color: 'var(--fg-muted)' }}>
-          {/* Header.tsx will replace this placeholder */}
-          Navbar placeholder
-        </div>
-      </div>
 
       {/* ── Main content row ────────────────────────────────────── */}
       <div className="flex flex-1 overflow-hidden">
