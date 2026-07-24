@@ -1,1 +1,120 @@
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300..700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import 'tailwindcss';
+
+/* ── Theme tokens ─────────────────────────────────────────── */
+:root {
+  --bg: #f0f5fb;
+  --bg-card: #ffffff;
+  --bg-panel: #f7fafd;
+  --bg-hover: #edf3f9;
+  --fg: #0f1923;
+  --fg-muted: #5a7290;
+  --border: #ccd8e6;
+  --border-strong: #afc0d4;
+  --primary: #1a5fc4;
+  --primary-fg: #ffffff;
+  --accent: #dc2626;
+  --ring: rgba(26, 95, 196, 0.4);
+  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06);
+  --shadow-lg: 0 8px 40px rgba(0,0,0,0.14);
+  --header-h: 3.25rem;
+  --panel-w: 272px;
+  --drawer-w: 280px;
+
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+}
+
+.dark {
+  --bg: #070f1c;
+  --bg-card: #0d1b30;
+  --bg-panel: #0a1525;
+  --bg-hover: #111f38;
+  --fg: #ddeeff;
+  --fg-muted: #6b93bb;
+  --border: #1e3558;
+  --border-strong: #26456e;
+  --primary: #3b82f6;
+  --primary-fg: #ffffff;
+  --accent: #f87171;
+  --ring: rgba(59, 130, 246, 0.4);
+  --shadow: 0 1px 3px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.25);
+  --shadow-lg: 0 8px 40px rgba(0,0,0,0.5);
+}
+
+/* ── Base ─────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+html { height: 100%; }
+body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--fg);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Scrollbar ───────────────────────────────────────────── */
+* { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
+
+/* ── Animations ──────────────────────────────────────────── */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+@keyframes slide-right {
+  from { opacity: 0; transform: translateX(28px); }
+  to   { opacity: 1; transform: translateX(0);    }
+}
+@keyframes slide-left {
+  from { opacity: 0; transform: translateX(-28px); }
+  to   { opacity: 1; transform: translateX(0);     }
+}
+@keyframes scale-up {
+  from { opacity: 0; transform: scale(0.93) translateY(6px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);   }
+}
+@keyframes stagger-in {
+  from { opacity: 0; transform: translateX(12px); }
+  to   { opacity: 1; transform: translateX(0);    }
+}
+@keyframes blink {
+  0%, 100% { opacity: 1;   }
+  50%       { opacity: 0.3; }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0);    }
+  50%       { transform: translateY(-4px); }
+}
+@keyframes pulse-ring {
+  0%   { transform: scale(1);   opacity: 0.7; }
+  100% { transform: scale(2.8); opacity: 0;   }
+}
+@keyframes drawer-slide-in {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0);    }
+}
+
+.anim-fade-up     { animation: fade-up      0.4s ease-out   both; }
+.anim-slide-right { animation: slide-right  0.35s cubic-bezier(0.16,1,0.3,1) both; }
+.anim-slide-left  { animation: slide-left   0.35s cubic-bezier(0.16,1,0.3,1) both; }
+.anim-scale-up    { animation: scale-up     0.28s cubic-bezier(0.16,1,0.3,1) both; }
+.anim-stagger-in  { animation: stagger-in   0.35s cubic-bezier(0.16,1,0.3,1) both; }
+.anim-blink       { animation: blink        1.4s ease-in-out infinite; }
+.anim-float       { animation: float        3s ease-in-out  infinite; }
+.anim-drawer      { animation: drawer-slide-in 0.3s cubic-bezier(0.16,1,0.3,1) both; }
+
+/* ── Sidebar drawer transition ───────────────────────────── */
+.sidebar-drawer {
+  width: 0;
+  overflow: hidden;
+  transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
+}
+.sidebar-drawer.open {
+  width: var(--drawer-w);
+}
