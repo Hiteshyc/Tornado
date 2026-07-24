@@ -81,12 +81,6 @@ body {
  *   Theme switching is done by toggling the "dark" class on <html>.
  */
 
-/* ── 1. Fonts ─────────────────────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300..700&family=JetBrains+Mono:wght@400;500&display=swap');
-
-/* ── 2. Tailwind ──────────────────────────────────────────────────────── */
-@import 'tailwindcss';
-
 /* ── 3. Custom colour palette ─────────────────────────────────────────── */
 /*
  * Navy palette — used for dark mode backgrounds and muted text.
