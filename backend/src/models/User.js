@@ -53,6 +53,13 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    preferences: {
+      theme: {
+        type: String,
+        enum: ["light", "dark"],
+        default: "light",
+      },
+    },
   },
   { timestamps: true }, // adds createdAt, updatedAt
 );

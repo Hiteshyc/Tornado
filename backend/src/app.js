@@ -6,6 +6,7 @@ import { env } from "./config/env.js";
 import { connectDB } from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import tokenRoutes from "./routes/tokenRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
 import { notFound, errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
@@ -24,6 +25,8 @@ app.use("/api/internal/token", tokenRoutes);
 // Routes
 app.get("/health", (req, res) => res.json({ status: "ok" }));
 app.use("/api/auth", authRoutes);
+app.use("/api/user", userRoutes);
+
 
 // Error handling (must be last)
 app.use(notFound);

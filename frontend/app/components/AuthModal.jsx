@@ -10,8 +10,12 @@ import {
 } from "../libs/api";
 
 // modes: "login" | "register" | "forgot-otp" | "forgot-reset"
-export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
-  const [mode, setMode] = useState("login");
+//
+// initialMode — optional prop that sets which tab is active when the modal
+// first opens. Navbar passes "login" or "register" depending on which item
+// the user clicked. Defaults to "login" if not provided.
+export default function AuthModal({ isOpen, onClose, onLoginSuccess, initialMode = "login" }) {
+  const [mode, setMode] = useState(initialMode);
 
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [otp, setOtp] = useState("");
@@ -28,6 +32,18 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
   const [timer, setTimer] = useState(30);
   const [canResend, setCanResend] = useState(false);
   const timerRef = useRef(null);
+
+  // ---- Sync mode to initialMode each time the modal opens ----
+  // When the modal is closed and reopened via a different entry point
+  // (e.g. user clicks "Register" after previously closing from "Login"),
+  // this resets mode to whichever tab the caller requested.
+  useEffect(() => {
+    if (isOpen) {
+      setMode(initialMode);
+      setError("");
+      setInfoMessage("");
+    }
+  }, [isOpen, initialMode]);
 
   // ---- Countdown effect when entering "forgot-otp" mode ----
   useEffect(() => {
