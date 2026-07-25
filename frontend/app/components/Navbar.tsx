@@ -41,8 +41,8 @@ import {
   HelpCircle,   // "Help" menu item (guest)
 } from "lucide-react";
 
-import { useAuth, type AuthUser } from "../contexts/AuthContext";
-import { useTheme } from "../contexts/ThemeContext";
+import { useAuth, type AuthUser } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
 import AuthModal from "./AuthModal";
 
 // ---------------------------------------------------------------------------

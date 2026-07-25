@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { Phone, MapPin, CheckCircle, Smartphone, Compass, ArrowRight, Loader } from "lucide-react";
-import { useAuth } from "../contexts/AuthContext";
-import { useTheme } from "../contexts/ThemeContext";
+import { useAuth } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
 import { submitOnboarding } from "../libs/api";
 
 interface OnboardingModalProps {
