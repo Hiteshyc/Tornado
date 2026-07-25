@@ -13,21 +13,4 @@ export const announcementService = {
     }
     return announcement;
   },
-
-  async create({ agency, badge, title, body, priority, userId }) {
-    return announcementRepository.create({
-      agency,
-      badge: badge.toUpperCase(),
-      title,
-      body,
-      priority,
-      createdBy: userId,
-    });
-  },
-
-  async deactivate(id) {
-    const ann = await announcementRepository.findById(id);
-    if (!ann) throw new ApiError(404, "Announcement not found");
-    return announcementRepository.deactivate(id);
-  },
 };

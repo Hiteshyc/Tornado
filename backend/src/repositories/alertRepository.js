@@ -11,17 +11,4 @@ export const alertRepository = {
   findById(id) {
     return Alert.findById(id);
   },
-
-  create(data) {
-    return Alert.create(data);
-  },
-
-  /** Soft-delete: set isActive to false */
-  deactivate(id) {
-    return Alert.findByIdAndUpdate(id, { isActive: false }, { new: true });
-  },
-
-  update(id, data) {
-    return Alert.findByIdAndUpdate(id, data, { new: true, runValidators: true });
-  },
 };
