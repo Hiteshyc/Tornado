@@ -1,3 +1,63 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300..700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import 'tailwindcss';
+
+/* ── Theme tokens ─────────────────────────────────────────── */
+:root {
+  --bg: #f0f5fb;
+  --bg-card: #ffffff;
+  --bg-panel: #f7fafd;
+  --bg-hover: #edf3f9;
+  --fg: #0f1923;
+  --fg-muted: #5a7290;
+  --border: #ccd8e6;
+  --border-strong: #afc0d4;
+  --primary: #1a5fc4;
+  --primary-fg: #ffffff;
+  --accent: #dc2626;
+  --ring: rgba(26, 95, 196, 0.4);
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.14);
+  --header-h: 3.25rem;
+  --panel-w: 272px;
+  --drawer-w: 280px;
+}
+
+.dark {
+  --bg: #070f1c;
+  --bg-card: #0d1b30;
+  --bg-panel: #0a1525;
+  --bg-hover: #111f38;
+  --fg: #ddeeff;
+  --fg-muted: #6b93bb;
+  --border: #1e3558;
+  --border-strong: #26456e;
+  --primary: #3b82f6;
+  --primary-fg: #ffffff;
+  --accent: #f87171;
+  --ring: rgba(59, 130, 246, 0.4);
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.5);
+}
+
+/* ── Base ─────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+}
+
+body {
+  height: 100%;
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--fg);
+  -webkit-font-smoothing: antialiased;
+}
+
 /**
  * globals.css
  *
@@ -20,12 +80,6 @@
  *     color: var(--fg-muted);
  *   Theme switching is done by toggling the "dark" class on <html>.
  */
-
-/* ── 1. Fonts ─────────────────────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300..700&family=JetBrains+Mono:wght@400;500&display=swap');
-
-/* ── 2. Tailwind ──────────────────────────────────────────────────────── */
-@import 'tailwindcss';
 
 /* ── 3. Custom colour palette ─────────────────────────────────────────── */
 /*
@@ -58,10 +112,10 @@
    *   high     → red
    *   critical → purple
    */
-  --color-sev-safe:     #16a34a;
-  --color-sev-low:      #ca8a04;
+  --color-sev-safe: #16a34a;
+  --color-sev-low: #ca8a04;
   --color-sev-moderate: #ea580c;
-  --color-sev-high:     #dc2626;
+  --color-sev-high: #dc2626;
   --color-sev-critical: #9333ea;
 }
 
@@ -72,34 +126,47 @@
  */
 :root {
   /* Backgrounds */
-  --bg:        #f0f5fb; /* page background */
-  --bg-card:   #ffffff; /* card / navbar surface */
-  --bg-panel:  #f7fafd; /* sidebar / panel surface */
-  --bg-hover:  #edf3f9; /* hovered interactive element */
+  --bg: #f0f5fb;
+  /* page background */
+  --bg-card: #ffffff;
+  /* card / navbar surface */
+  --bg-panel: #f7fafd;
+  /* sidebar / panel surface */
+  --bg-hover: #edf3f9;
+  /* hovered interactive element */
 
   /* Foregrounds */
-  --fg:        #0f1923; /* primary text */
-  --fg-muted:  #5a7290; /* secondary / placeholder text */
+  --fg: #0f1923;
+  /* primary text */
+  --fg-muted: #5a7290;
+  /* secondary / placeholder text */
 
   /* Borders */
-  --border:        #ccd8e6; /* default border */
-  --border-strong: #afc0d4; /* emphasis border */
+  --border: #ccd8e6;
+  /* default border */
+  --border-strong: #afc0d4;
+  /* emphasis border */
 
   /* Brand */
-  --primary:    #1a5fc4; /* buttons, links, accents */
-  --primary-fg: #ffffff; /* text on primary background */
-  --accent:     #dc2626; /* destructive / danger / logout */
+  --primary: #1a5fc4;
+  /* buttons, links, accents */
+  --primary-fg: #ffffff;
+  /* text on primary background */
+  --accent: #dc2626;
+  /* destructive / danger / logout */
 
   /* Focus ring */
   --ring: rgba(26, 95, 196, 0.4);
 
   /* Shadows */
-  --shadow:    0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06);
-  --shadow-lg: 0 8px 40px rgba(0,0,0,0.14);
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.14);
 
   /* Layout constants */
-  --header-h: 3.25rem; /* navbar height — keep in sync with layout.tsx */
-  --panel-w:  272px;   /* right action panel width */
+  --header-h: 3.25rem;
+  /* navbar height — keep in sync with layout.tsx */
+  --panel-w: 272px;
+  /* right action panel width */
 }
 
 /* ── 5. Dark mode overrides (.dark) ───────────────────────────────────── */
@@ -108,29 +175,31 @@
  * Every token that needs to differ in dark mode is redefined here.
  */
 .dark {
-  --bg:        #070f1c;
-  --bg-card:   #0d1b30;
-  --bg-panel:  #0a1525;
-  --bg-hover:  #111f38;
+  --bg: #070f1c;
+  --bg-card: #0d1b30;
+  --bg-panel: #0a1525;
+  --bg-hover: #111f38;
 
-  --fg:        #ddeeff;
-  --fg-muted:  #6b93bb;
+  --fg: #ddeeff;
+  --fg-muted: #6b93bb;
 
-  --border:        #1e3558;
+  --border: #1e3558;
   --border-strong: #26456e;
 
-  --primary:    #3b82f6;
+  --primary: #3b82f6;
   --primary-fg: #ffffff;
-  --accent:     #f87171;
+  --accent: #f87171;
 
   --ring: rgba(59, 130, 246, 0.4);
 
-  --shadow:    0 1px 3px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.25);
-  --shadow-lg: 0 8px 40px rgba(0,0,0,0.5);
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.5);
 }
 
 /* ── 6. Base reset ────────────────────────────────────────────────────── */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
@@ -147,6 +216,111 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* ── Scrollbar ───────────────────────────────────────────── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 4px;
+}
+
+/* ── Animations ──────────────────────────────────────────── */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-right {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-left {
+  from {
+    opacity: 0;
+    transform: translateX(-28px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scale-up {
+  from {
+    opacity: 0;
+    transform: scale(0.93) translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes stagger-in {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes blink {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
 /* ── 7. Scrollbar styling ─────────────────────────────────────────────── */
 /* Firefox */
 * {
@@ -155,82 +329,224 @@ body {
 }
 
 /* Webkit (Chrome, Safari, Edge) */
-::-webkit-scrollbar        { width: 4px; height: 4px; }
-::-webkit-scrollbar-track  { background: transparent; }
-::-webkit-scrollbar-thumb  { background: var(--border-strong); border-radius: 4px; }
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 4px;
+}
 
 /* ── 8. Animation keyframes ───────────────────────────────────────────── */
 
 /* Pulse ring — expands and fades, used on map hazard markers */
 @keyframes pulse-ring {
-  0%   { transform: scale(1);   opacity: 0.7; }
-  100% { transform: scale(2.8); opacity: 0;   }
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+
+  100% {
+    transform: scale(2.8);
+    opacity: 0;
+  }
+}
+
+@keyframes drawer-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.anim-fade-up {
+  animation: fade-up 0.4s ease-out both;
+}
+
+.anim-slide-right {
+  animation: slide-right 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.anim-slide-left {
+  animation: slide-left 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.anim-scale-up {
+  animation: scale-up 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.anim-stagger-in {
+  animation: stagger-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.anim-blink {
+  animation: blink 1.4s ease-in-out infinite;
+}
+
+.anim-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.anim-drawer {
+  animation: drawer-slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── Sidebar drawer transition ───────────────────────────── */
+.sidebar-drawer {
+  width: 0;
+  overflow: hidden;
+  transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
+}
+
+.sidebar-drawer.open {
+  width: var(--drawer-w);
 }
 
 /* Radar sweep — continuous rotation, used on radar-style indicators */
 @keyframes radar-sweep {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Fade up — element fades in while rising slightly (panel / modal entry) */
 @keyframes fade-up {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0);     }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Slide right — element slides in from the right (right-side panels) */
 @keyframes slide-right {
-  from { opacity: 0; transform: translateX(28px); }
-  to   { opacity: 1; transform: translateX(0);    }
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 /* Slide left — element slides in from the left (left-side panels) */
 @keyframes slide-left {
-  from { opacity: 0; transform: translateX(-28px); }
-  to   { opacity: 1; transform: translateX(0);     }
+  from {
+    opacity: 0;
+    transform: translateX(-28px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 /* Scale up — element scales up from slightly smaller (dropdown / modal) */
 @keyframes scale-up {
-  from { opacity: 0; transform: scale(0.93) translateY(6px); }
-  to   { opacity: 1; transform: scale(1)    translateY(0);   }
+  from {
+    opacity: 0;
+    transform: scale(0.93) translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 /* Backdrop in — overlay fades in (modal backdrop) */
 @keyframes backdrop-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 /* Progress grow — horizontal bar grows from 0 to 100% (loading bars) */
 @keyframes progress-grow {
-  from { width: 0%; }
-  to   { width: 100%; }
+  from {
+    width: 0%;
+  }
+
+  to {
+    width: 100%;
+  }
 }
 
 /* Float — gentle vertical bob (alert badge, status pills) */
 @keyframes float {
-  0%, 100% { transform: translateY(0);    }
-  50%       { transform: translateY(-4px); }
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-4px);
+  }
 }
 
 /* Blink — opacity pulse (live indicator dot on alert badge) */
 @keyframes blink {
-  0%, 100% { opacity: 1;   }
-  50%       { opacity: 0.3; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.3;
+  }
 }
 
 /* Skeleton — shimmer loading placeholder */
 @keyframes skeleton {
-  0%   { background-position: -200% 0; }
-  100% { background-position:  200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 /* Stagger in — used for list items that animate in sequence */
 @keyframes stagger-in {
-  from { opacity: 0; transform: translateX(12px); }
-  to   { opacity: 1; transform: translateX(0);     }
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 /* ── 9. Animation utility classes ─────────────────────────────────────── */
@@ -238,19 +554,63 @@ body {
  * Apply these class names to elements to trigger the keyframes above.
  * Durations and easing are tuned to feel snappy but not jarring.
  */
-.anim-pulse-ring  { animation: pulse-ring    1.8s ease-out  infinite; }
-.anim-radar       { animation: radar-sweep   3.5s linear    infinite; }
-.anim-fade-up     { animation: fade-up       0.4s ease-out  both; }
-.anim-slide-right { animation: slide-right   0.35s cubic-bezier(0.16,1,0.3,1) both; }
-.anim-slide-left  { animation: slide-left    0.35s cubic-bezier(0.16,1,0.3,1) both; }
-.anim-scale-up    { animation: scale-up      0.28s cubic-bezier(0.16,1,0.3,1) both; }
-.anim-backdrop    { animation: backdrop-in   0.2s ease-out  both; }
-.anim-progress    { animation: progress-grow 2s cubic-bezier(0.4,0,0.2,1) forwards; }
-.anim-float       { animation: float         3s ease-in-out infinite; }
-.anim-blink       { animation: blink         1.4s ease-in-out infinite; }
-.anim-stagger-in  { animation: stagger-in    0.35s cubic-bezier(0.16,1,0.3,1) both; }
+.anim-pulse-ring {
+  animation: pulse-ring 1.8s ease-out infinite;
+}
+
+.anim-radar {
+  animation: radar-sweep 3.5s linear infinite;
+}
+
+.anim-fade-up {
+  animation: fade-up 0.4s ease-out both;
+}
+
+.anim-slide-right {
+  animation: slide-right 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.anim-slide-left {
+  animation: slide-left 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.anim-scale-up {
+  animation: scale-up 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.anim-backdrop {
+  animation: backdrop-in 0.2s ease-out both;
+}
+
+.anim-progress {
+  animation: progress-grow 2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.anim-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.anim-blink {
+  animation: blink 1.4s ease-in-out infinite;
+}
+
+.anim-stagger-in {
+  animation: stagger-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
 
 /* Hazard marker pulse rings — staggered delays create expanding wave effect */
-.marker-ring   { position: absolute; inset: -4px; border-radius: 50%; border: 2px solid currentColor; animation: pulse-ring 1.8s ease-out infinite; }
-.marker-ring-2 { animation-delay: 0.6s; }
-.marker-ring-3 { animation-delay: 1.2s; }
+.marker-ring {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  animation: pulse-ring 1.8s ease-out infinite;
+}
+
+.marker-ring-2 {
+  animation-delay: 0.6s;
+}
+
+.marker-ring-3 {
+  animation-delay: 1.2s;
+}

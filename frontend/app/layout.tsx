@@ -148,8 +148,8 @@ async function decodeSessionToken(): Promise<any | null> {
         if (profileData && profileData.user) {
           return profileData.user;
         }
-      } 
-    } catch (err: any) {}
+      }
+    } catch (err: any) { }
 
     // Fallback: return basic info decoded from the token payload
     return { id: payload.id, role: payload.role };
@@ -204,7 +204,7 @@ export const metadata: Metadata = {
 export default async function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: React.ReactNode
 }>) {
   /**
    * Decode the JWT cookie server-side.
@@ -256,5 +256,5 @@ export default async function RootLayout({
         </Providers>
       </body>
     </html>
-  );
+  )
 }

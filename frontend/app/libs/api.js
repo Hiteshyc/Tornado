@@ -101,6 +101,13 @@ export async function resetPassword({
   return handleResponse(res);
 }
 
+export async function getAlerts(severity = "all") {
+  const res = await fetch(`/api/alerts?severity=${severity}`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  return handleResponse(res);
+}
 // =============================================================================
 // ── User session & profile ────────────────────────────────────────────────────
 // The three functions below are NEW additions for the navbar phase.
@@ -128,6 +135,13 @@ export async function logoutUser() {
   return handleResponse(res);
 }
 
+export async function getAnnouncements() {
+  const res = await fetch("/api/announcements", {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  return handleResponse(res);
+}
 /**
  * getMe
  *
@@ -197,4 +211,11 @@ export async function submitOnboarding(data) {
   return handleResponse(res);
 }
 
+export async function getSafetyGuides() {
+  const res = await fetch("/api/safety-guides", {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  return handleResponse(res);
+}
 

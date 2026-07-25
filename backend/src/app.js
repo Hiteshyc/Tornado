@@ -6,6 +6,10 @@ import { env } from "./config/env.js";
 import { connectDB } from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import tokenRoutes from "./routes/tokenRoutes.js";
+import alertRoutes from "./routes/alertRoutes.js";
+import announcementRoutes from "./routes/announcementRoutes.js";
+import safetyGuideRoutes from "./routes/safetyGuideRoutes.js";
+
 import userRoutes from "./routes/userRoutes.js";
 import { notFound, errorHandler } from "./middleware/errorHandler.js";
 
@@ -25,6 +29,9 @@ app.use("/api/internal/token", tokenRoutes);
 // Routes
 app.get("/health", (req, res) => res.json({ status: "ok" }));
 app.use("/api/auth", authRoutes);
+app.use("/api/alerts", alertRoutes);
+app.use("/api/announcements", announcementRoutes);
+app.use("/api/safety-guides", safetyGuideRoutes);
 app.use("/api/user", userRoutes);
 
 
