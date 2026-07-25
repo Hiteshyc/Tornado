@@ -24,6 +24,7 @@
  */
 
 import { useState, useRef, useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import {
   Shield,       // App logo icon
   Sun,          // Light-mode icon for theme toggle
@@ -39,6 +40,7 @@ import {
   BarChart2,    // "Dashboard" / "Analytics" menu items (admin)
   Megaphone,    // "System Settings" menu item (admin)
   HelpCircle,   // "Help" menu item (guest)
+  LayoutDashboard, // Dashboard icon
 } from "lucide-react";
 
 import { useAuth, type AuthUser } from "../context/AuthContext";
@@ -79,12 +81,14 @@ const ROLE_MENUS: Record<string, MenuItem[]> = {
     { icon: HelpCircle, label: "Help" },
   ],
   user: [
+    { icon: LayoutDashboard, label: "Dashboard" },
     { icon: User, label: "Profile" },
     { icon: FileText, label: "My Reports" },
     { icon: Settings, label: "Settings" },
     { icon: LogOut, label: "Logout", danger: true },
   ],
   officer: [
+    { icon: LayoutDashboard, label: "Dashboard" },
     { icon: User, label: "Profile" },
     { icon: Bell, label: "Assigned Alerts" },
     { icon: FileText, label: "Verify Reports" },
@@ -92,7 +96,7 @@ const ROLE_MENUS: Record<string, MenuItem[]> = {
     { icon: LogOut, label: "Logout", danger: true },
   ],
   admin: [
-    { icon: BarChart2, label: "Dashboard" },
+    { icon: LayoutDashboard, label: "Dashboard" },
     { icon: Users, label: "User Management" },
     { icon: BarChart2, label: "Analytics" },
     { icon: Megaphone, label: "System Settings" },
@@ -188,6 +192,8 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): nu
 // ---------------------------------------------------------------------------
 
 export default function Navbar() {
+  const router = useRouter();
+  const pathname = usePathname();
   const { user, login, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { alerts } = useData();
@@ -298,7 +304,12 @@ export default function Navbar() {
   const roleLabel  = ROLE_LABELS[role];
   const initial    = getAvatarInitial(user);
   const name       = getDisplayName(user);
-  const menuItems  = ROLE_MENUS[role] ?? ROLE_MENUS.guest;
+  const isProfilePage = pathname === "/profile";
+  const menuItems  = (ROLE_MENUS[role] ?? ROLE_MENUS.guest).filter(item => {
+    if (item.label === "Dashboard") return isProfilePage;
+    if (item.label === "Profile") return !isProfilePage;
+    return true;
+  });
 
   // ── Action handlers ───────────────────────────────────────────────────────
 
@@ -331,6 +342,16 @@ export default function Navbar() {
 
     if (label === "Logout") {
       logout(); // clears user from AuthContext (stub — no cookie clearing yet)
+      return;
+    }
+
+    if (label === "Profile") {
+      router.push("/profile");
+      return;
+    }
+
+    if (label === "Dashboard") {
+      router.push("/");
       return;
     }
 
@@ -375,7 +396,10 @@ export default function Navbar() {
         }}
       >
         {/* ── Left: Logo ─────────────────────────────────────────────── */}
-        <div className="flex items-center gap-2.5">
+        <button
+          onClick={() => router.push("/")}
+          className="flex items-center gap-2.5 cursor-pointer hover:opacity-90 active:scale-95 transition-all bg-transparent border-0 p-0 outline-none align-middle"
+        >
           {/* Shield icon in primary colour */}
           <div
             className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
@@ -391,7 +415,7 @@ export default function Navbar() {
           >
             NDMA
           </span>
-        </div>
+        </button>
 
         {/* ── Centre: App title (absolutely positioned to stay centred) ── */}
         <div className="absolute left-1/2 -translate-x-1/2 text-center pointer-events-none">
