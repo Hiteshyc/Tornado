@@ -41,6 +41,7 @@ export const authService = {
       phone,
       passwordHash,
       salt,
+      lastLogin: new Date(),
     });
 
     // Step 6: Issue access token
@@ -95,7 +96,7 @@ export const authService = {
     }
 
     // Successful login: reset attempts and update lastLogin
-    await userRepository.resetLoginAttempts(user._id);
+    const loggedInUser = await userRepository.resetLoginAttempts(user._id);
 
     // Issue access token
     const token = await requestAccessToken(user._id.toString(), user.role);
@@ -103,7 +104,7 @@ export const authService = {
     // Issue refresh token: revoke any previous sessions, then persist new one
     const { refreshToken } = await issueAndStoreRefreshToken(user._id);
 
-    return { user: sanitizeUser(user), token, refreshToken };
+    return { user: sanitizeUser(loggedInUser), token, refreshToken };
   },
 
   async logout(userId) {

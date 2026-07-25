@@ -75,6 +75,28 @@ const userSchema = new mongoose.Schema(
       zipCode: String,
       formattedAddress: String,
     },
+    dob: {
+      type: String,
+      default: null,
+    },
+    gender: {
+      type: String,
+      default: null,
+    },
+    emergency: {
+      bloodGroup: {
+        type: String,
+        default: null,
+      },
+      medicalConditions: {
+        type: String,
+        default: null,
+      },
+      specialAssistance: {
+        type: Boolean,
+        default: false,
+      },
+    },
     location: {
       type: {
         type: String,

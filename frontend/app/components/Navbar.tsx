@@ -323,7 +323,7 @@ export default function Navbar() {
    *
    * @param label — the menu item label string
    */
-  function handleMenuItemClick(label: string) {
+  async function handleMenuItemClick(label: string) {
     setDropdownOpen(false);
 
     if (label === "Login") {
@@ -341,12 +341,18 @@ export default function Navbar() {
     }
 
     if (label === "Logout") {
-      logout(); // clears user from AuthContext (stub — no cookie clearing yet)
+      await logout();
+      router.push("/");
       return;
     }
 
     if (label === "Profile") {
       router.push("/profile");
+      return;
+    }
+
+    if (label === "My Reports") {
+      router.push("/profile?tab=reports");
       return;
     }
 

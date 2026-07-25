@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   User, Mail, Phone, Calendar, MapPin, BadgeCheck, Lock,
   FileText, LogOut, PencilLine, Save, X, Check,
@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
+import { updateUserProfile, getUserReports, uploadProfileImage } from '../libs/api';
 
 /* ─── Types ─────────────────────────────────────────────────────── */
 
@@ -31,6 +33,10 @@ interface PersonalData {
   address: string;
   role: string;
   verified: boolean;
+  street?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
 }
 
 interface EmergencyData {
@@ -67,6 +73,10 @@ const INITIAL_PERSONAL: PersonalData = {
   address: '14, Beach Road, Panaji, North Goa – 403001',
   role: 'Citizen',
   verified: true,
+  street: '14, Beach Road',
+  city: 'Panaji',
+  state: 'North Goa',
+  zipCode: '403001',
 };
 
 const INITIAL_EMERGENCY: EmergencyData = {
@@ -83,23 +93,55 @@ const INITIAL_SECURITY: SecurityData = {
   lastLogin: '25 Jul 2026, 09:42 AM · Panaji, Goa',
 };
 
-const REPORTS: Report[] = [
-  { id: '#1024', hazardType: 'Flood', location: 'Panaji, North Goa', date: '24 Jul 2026', severity: 'Medium', status: 'Pending' },
-  { id: '#1021', hazardType: 'Cyclone', location: 'Calangute Beach', date: '22 Jul 2026', severity: 'High', status: 'Verified' },
-  { id: '#1015', hazardType: 'High Tide', location: 'Colva Beach', date: '18 Jul 2026', severity: 'Low', status: 'Resolved' },
-  { id: '#1009', hazardType: 'Coastal Erosion', location: 'Varca Beach', date: '12 Jul 2026', severity: 'Medium', status: 'Resolved' },
-  { id: '#1003', hazardType: 'Oil Spill', location: 'Mormugao Port', date: '5 Jul 2026', severity: 'High', status: 'Verified' },
-];
+function mapBackendReportToFrontend(r: any): Report {
+  let severity: 'Low' | 'Medium' | 'High' = 'Low';
+  if (r.severity >= 4) severity = 'High';
+  else if (r.severity >= 3) severity = 'Medium';
+
+  let status: 'Pending' | 'Verified' | 'Resolved' = 'Pending';
+  if (r.status === 'resolved') {
+    status = 'Resolved';
+  } else if (r.status === 'acknowledged') {
+    status = 'Verified';
+  }
+
+  let date = 'Recent';
+  if (r.createdAt) {
+    const d = new Date(r.createdAt);
+    date = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  return {
+    id: `#${r._id.substring(r._id.length - 4).toUpperCase()}`,
+    hazardType: r.disasterType || 'Unknown',
+    location: r.location || 'Unknown',
+    date,
+    severity,
+    status,
+  };
+}
 
 const SEV_CFG = {
-  High:   { color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
+  High: { color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
   Medium: { color: '#ea580c', bg: '#fff7ed', border: '#fed7aa' },
-  Low:    { color: '#ca8a04', bg: '#fefce8', border: '#fef08a' },
+  Low: { color: '#ca8a04', bg: '#fefce8', border: '#fef08a' },
 };
 const STA_CFG = {
-  Pending:  { color: '#b45309', bg: '#fffbeb' },
+  Pending: { color: '#b45309', bg: '#fffbeb' },
   Verified: { color: '#1d4ed8', bg: '#eff6ff' },
   Resolved: { color: '#15803d', bg: '#f0fdf4' },
+};
+
+const ROLE_LABELS: Record<string, string> = {
+  user: "Citizen",
+  officer: "Officer",
+  admin: "Admin",
+};
+
+const ROLE_COLORS: Record<string, string> = {
+  user: "#16a34a",
+  officer: "#ca8a04",
+  admin: "#dc2626",
 };
 
 /* ─── Sub-components ─────────────────────────────────────────────── */
@@ -337,41 +379,160 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
 /* ─── Nav tab ────────────────────────────────────────────────────── */
 
 const TABS: { id: Tab; label: string; Icon: React.ElementType }[] = [
-  { id: 'personal',  label: 'Personal Information',  Icon: User },
+  { id: 'personal', label: 'Personal Information', Icon: User },
   { id: 'emergency', label: 'Emergency Information', Icon: Siren },
-  { id: 'security',  label: 'Account Security',       Icon: Lock },
-  { id: 'reports',   label: 'Report History',          Icon: ClipboardList },
+  { id: 'security', label: 'Account Security', Icon: Lock },
+  { id: 'reports', label: 'Report History', Icon: ClipboardList },
 ];
+
+function formatLastLogin(dateString: string | null | undefined, userAddressCity?: string, userAddressState?: string): string {
+  if (!dateString) return 'No login history found';
+  try {
+    const date = new Date(dateString);
+    const options: Intl.DateTimeFormatOptions = {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    };
+    const formattedDate = date.toLocaleString('en-IN', options);
+    
+    if (userAddressCity && userAddressState) {
+      return `${formattedDate} · ${userAddressCity}, ${userAddressState}`;
+    }
+    return formattedDate;
+  } catch (err) {
+    return dateString;
+  }
+}
 
 /* ─── Profile page ───────────────────────────────────────────────── */
 
 export default function Profile() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { theme } = useTheme();
+  const { logout, user, login } = useAuth();
   const isDark = theme === 'dark';
 
-  const [activeTab, setActiveTab]     = useState<Tab>('personal');
-  const [editingTab, setEditingTab]   = useState<Tab | null>(null);
-  const [saving, setSaving]           = useState(false);
+  useEffect(() => {
+    if (user === null) {
+      router.replace('/');
+    }
+  }, [user, router]);
 
-  const [personal, setPersonal]               = useState(INITIAL_PERSONAL);
-  const [personalDraft, setPersonalDraft]     = useState(INITIAL_PERSONAL);
-  const [emergency, setEmergency]             = useState(INITIAL_EMERGENCY);
-  const [emergencyDraft, setEmergencyDraft]   = useState(INITIAL_EMERGENCY);
-  const [security, setSecurity]               = useState(INITIAL_SECURITY);
-  const [securityDraft, setSecurityDraft]     = useState(INITIAL_SECURITY);
-  const [twoFA, setTwoFA]                     = useState(false);
+  const [activeTab, setActiveTab] = useState<Tab>('personal');
+  const [editingTab, setEditingTab] = useState<Tab | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  const [avatar, setAvatar]           = useState<string | null>(null);
-  const [uploading, setUploading]     = useState(false);
-  const fileRef                       = useRef<HTMLInputElement>(null);
+  /* Read tab from query parameter on mount/load or when URL changes, and clean it up */
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const tab = searchParams.get('tab');
+      if (tab === 'reports' || tab === 'personal' || tab === 'emergency' || tab === 'security') {
+        setActiveTab(tab as Tab);
+        
+        // Strip query parameters so future manual page refreshes default to 'personal'
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, '', cleanUrl);
+      }
+    }
+  }, [searchParams]);
 
-  const [showLogout, setShowLogout]   = useState(false);
+  const [personal, setPersonal] = useState(INITIAL_PERSONAL);
+  const [personalDraft, setPersonalDraft] = useState(INITIAL_PERSONAL);
+  const [emergency, setEmergency] = useState(INITIAL_EMERGENCY);
+  const [emergencyDraft, setEmergencyDraft] = useState(INITIAL_EMERGENCY);
+  const [security, setSecurity] = useState(INITIAL_SECURITY);
+  const [securityDraft, setSecurityDraft] = useState(INITIAL_SECURITY);
+  const [twoFA, setTwoFA] = useState(false);
+  const [reports, setReports] = useState<Report[]>([]);
+
+  const [avatar, setAvatar] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const [showLogout, setShowLogout] = useState(false);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
 
-  const [toasts, setToasts]           = useState<Toast[]>([]);
-  const toastId                       = useRef(0);
-  const [showPwd, setShowPwd]         = useState<Record<string, boolean>>({});
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const toastId = useRef(0);
+  const [showPwd, setShowPwd] = useState<Record<string, boolean>>({});
+
+  /* Hydrate state from user context */
+  useEffect(() => {
+    if (user) {
+      const formattedAddress = user.address?.formattedAddress || '';
+      
+      const addr = user.address;
+      let street = addr?.street || '';
+      let city = addr?.city || '';
+      let state = addr?.state || '';
+      let zipCode = addr?.zipCode || '';
+
+      // Fallback: split formattedAddress if subfields are missing
+      if (!street && !city && !state && !zipCode && formattedAddress) {
+        const parts = formattedAddress.split(',').map(p => p.trim());
+        if (parts.length >= 4) {
+          street = parts[0] || '';
+          city = parts[1] || '';
+          state = parts[2] || '';
+          zipCode = parts[3]?.replace(/\D/g, '') || '';
+        } else if (parts.length > 0) {
+          // If less than 4 parts, just put everything in street
+          street = formattedAddress;
+        }
+      }
+
+      const initialPersonal = {
+        name: user.name || 'Citizen User',
+        email: user.email || '',
+        mobile: user.phone || '',
+        dob: user.dob || '1992-07-15', // mock defaults for un-hydration supported values
+        gender: user.gender || 'Male',
+        address: formattedAddress || '14, Beach Road, Panaji, North Goa – 403001',
+        role: ROLE_LABELS[user.role] || 'Citizen',
+        verified: user.isOnboarded || false,
+        street,
+        city,
+        state,
+        zipCode,
+      };
+      setPersonal(initialPersonal);
+      setPersonalDraft(initialPersonal);
+
+      const initialEmergency = {
+        bloodGroup: user.emergency?.bloodGroup || 'O+',
+        medicalConditions: user.emergency?.medicalConditions || 'None',
+        specialAssistance: user.emergency?.specialAssistance || false,
+      };
+      setEmergency(initialEmergency);
+      setEmergencyDraft(initialEmergency);
+
+      const initialSecurity = {
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+        twoFAEnabled: false,
+        lastLogin: formatLastLogin(user.lastLogin, user.address?.city, user.address?.state),
+      };
+      setSecurity(initialSecurity);
+      setSecurityDraft(initialSecurity);
+
+      // Hydrate user reports
+      getUserReports(user.id)
+        .then((res: any) => {
+          if (res?.success && Array.isArray(res.reports)) {
+            setReports(res.reports.map(mapBackendReportToFrontend));
+          }
+        })
+        .catch((err: any) => {
+          console.warn("[Profile] Failed to fetch user reports:", err);
+        });
+    }
+  }, [user]);
 
   /* ── Toasts ── */
   const addToast = useCallback((type: 'success' | 'error', message: string) => {
@@ -389,7 +550,7 @@ export default function Profile() {
   }, []);
 
   /* ── Avatar upload ── */
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(file.type)) {
@@ -398,17 +559,29 @@ export default function Profile() {
     if (file.size > 5 * 1024 * 1024) {
       return addToast('error', 'File exceeds 5 MB limit.');
     }
+    
+    if (!user) return addToast('error', 'You must be logged in to upload an image.');
+
     setUploading(true);
-    const reader = new FileReader();
-    reader.onload = ev => {
-      setTimeout(() => {
-        setAvatar(ev.target?.result as string);
-        setUploading(false);
+    
+    try {
+      const formData = new FormData();
+      formData.append("profileImage", file);
+      
+      const res = await uploadProfileImage(user.id, formData);
+      if (res && res.user && res.user.profileImage) {
+        setAvatar(res.user.profileImage);
         addToast('success', 'Profile picture updated.');
-      }, 1100);
-    };
-    reader.readAsDataURL(file);
-    e.target.value = '';
+        login(res.user); // Update context with new user data containing the image URL
+      } else {
+        throw new Error("Failed to upload image.");
+      }
+    } catch (err: any) {
+      addToast('error', err.message || 'Failed to upload profile picture.');
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
   };
 
   /* ── Edit helpers ── */
@@ -422,20 +595,62 @@ export default function Profile() {
   const cancelEdit = () => setEditingTab(null);
 
   const saveEdit = async (tab: Tab) => {
+    if (!user) return;
     setSaving(true);
-    await new Promise(r => setTimeout(r, 850));
-    if (tab === 'personal') setPersonal({ ...personalDraft });
-    if (tab === 'emergency') setEmergency({ ...emergencyDraft });
-    if (tab === 'security') {
-      if (securityDraft.newPassword && securityDraft.newPassword !== securityDraft.confirmPassword) {
-        addToast('error', 'New passwords do not match.');
-        setSaving(false);
-        return;
+    const userId = user.id;
+    try {
+      if (tab === 'personal') {
+        const payload = {
+          name: personalDraft.name,
+          phone: personalDraft.mobile,
+          dob: personalDraft.dob,
+          gender: personalDraft.gender,
+          address: {
+            street: personalDraft.street || "",
+            city: personalDraft.city || "",
+            state: personalDraft.state || "",
+            zipCode: personalDraft.zipCode || "",
+            formattedAddress: `${personalDraft.street || ""}, ${personalDraft.city || ""}, ${personalDraft.state || ""}, ${personalDraft.zipCode || ""}`
+          }
+        };
+        const res = await updateUserProfile(userId, payload);
+        const updatedAddress = res.user?.address?.formattedAddress || `${personalDraft.street || ""}, ${personalDraft.city || ""}, ${personalDraft.state || ""}, ${personalDraft.zipCode || ""}`;
+        setPersonal({ ...personalDraft, address: updatedAddress });
+        if (res.user) login(res.user);
       }
+      if (tab === 'emergency') {
+        const payload = {
+          emergency: {
+            bloodGroup: emergencyDraft.bloodGroup,
+            medicalConditions: emergencyDraft.medicalConditions,
+            specialAssistance: emergencyDraft.specialAssistance,
+          }
+        };
+        const res = await updateUserProfile(userId, payload);
+        setEmergency({ ...emergencyDraft });
+        if (res.user) login(res.user);
+      }
+      if (tab === 'security') {
+        if (securityDraft.newPassword && securityDraft.newPassword !== securityDraft.confirmPassword) {
+          addToast('error', 'New passwords do not match.');
+          setSaving(false);
+          return;
+        }
+        
+        if (securityDraft.newPassword) {
+          const payload = { password: securityDraft.newPassword };
+          await updateUserProfile(userId, payload);
+          // Reset password fields after successful save
+          setSecurityDraft({ ...security, currentPassword: '', newPassword: '', confirmPassword: '' });
+        }
+      }
+      addToast('success', 'Changes saved successfully.');
+    } catch (err: any) {
+      addToast('error', err.message || 'Failed to save changes.');
+    } finally {
+      setSaving(false);
+      setEditingTab(null);
     }
-    setSaving(false);
-    setEditingTab(null);
-    addToast('success', 'Changes saved successfully.');
   };
 
   const changeTab = (tab: Tab) => { setEditingTab(null); setActiveTab(tab); };
@@ -458,7 +673,7 @@ export default function Profile() {
   return (
     <div className="flex flex-col flex-1 overflow-hidden" style={{ backgroundColor: 'var(--bg)' }}>
       <ToastContainer toasts={toasts} dismiss={dismiss} />
-      {showLogout && <LogoutDialog onConfirm={() => { setShowLogout(false); router.push('/'); }} onCancel={() => setShowLogout(false)} />}
+      {showLogout && <LogoutDialog onConfirm={async () => { setShowLogout(false); await logout(); router.push('/'); }} onCancel={() => setShowLogout(false)} />}
       {selectedReport && <ReportModal report={selectedReport} onClose={() => setSelectedReport(null)} />}
       <input ref={fileRef} type="file" accept=".jpg,.jpeg,.png,.webp" className="hidden" onChange={handleFileChange} />
 
@@ -473,19 +688,19 @@ export default function Profile() {
           <div className="flex flex-col items-center pt-8 pb-6 px-5" style={{ borderBottom: '1px solid var(--border)' }}>
             <div className="relative mb-4 group">
               <div
-                className="rounded-full overflow-hidden ring-0 group-hover:ring-4 transition-all duration-300"
+                className="rounded-full overflow-hidden ring-0 group-hover:ring-4 transition-all duration-300 flex items-center justify-center text-2xl font-bold text-white select-none"
                 style={{ width: 86, height: 86, backgroundColor: 'var(--primary)', '--tw-ring-color': 'var(--ring)' } as React.CSSProperties}
               >
                 {uploading ? (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <RefreshCw size={26} className="animate-spin" style={{ color: 'white' }} />
-                  </div>
+                  <RefreshCw size={26} className="animate-spin" style={{ color: 'white' }} />
                 ) : avatar ? (
                   <img src={avatar} alt="Profile" className="w-full h-full object-cover" />
+                ) : user?.profileImage ? (
+                  <img src={user.profileImage} alt="Profile" className="w-full h-full object-cover" />
+                ) : user?.name ? (
+                  user.name[0].toUpperCase()
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <User size={38} style={{ color: 'white' }} strokeWidth={1.5} />
-                  </div>
+                  <User size={38} style={{ color: 'white' }} strokeWidth={1.5} />
                 )}
               </div>
 
@@ -514,7 +729,11 @@ export default function Profile() {
             </h2>
             <div className="flex items-center gap-1.5 mt-2">
               <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full"
-                style={{ backgroundColor: isDark ? '#1e3a5f' : '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>
+                style={{
+                  backgroundColor: user ? ROLE_COLORS[user.role] + "22" : "#eff6ff",
+                  color: user ? ROLE_COLORS[user.role] : "#1d4ed8",
+                  border: `1px solid ${user ? ROLE_COLORS[user.role] + "44" : "#bfdbfe"}`
+                }}>
                 {personal.role}
               </span>
               {personal.verified && (
@@ -541,7 +760,7 @@ export default function Profile() {
                   {id === 'reports' && (
                     <span className="text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center shrink-0"
                       style={{ backgroundColor: active ? 'rgba(255,255,255,0.2)' : 'var(--bg-hover)', color: active ? 'white' : 'var(--fg-muted)' }}>
-                      {REPORTS.length}
+                      {reports.length}
                     </span>
                   )}
                 </button>
@@ -600,10 +819,26 @@ export default function Profile() {
                   editable={isEditing('personal')} options={['Male', 'Female', 'Non-binary', 'Prefer not to say']}
                   onChange={v => setPersonalDraft(d => ({ ...d, gender: v }))} />
                 <Field label="Role" icon={BadgeCheck} value={personal.role} readOnly disabled />
-                <div className="col-span-2">
-                  <Field label="Address" icon={MapPin} value={isEditing('personal') ? personalDraft.address : personal.address}
-                    editable={isEditing('personal')} onChange={v => setPersonalDraft(d => ({ ...d, address: v }))} />
-                </div>
+                {!isEditing('personal') ? (
+                  <div className="col-span-2">
+                    <Field label="Address" icon={MapPin} value={personal.address} readOnly />
+                  </div>
+                ) : (
+                  <>
+                    <div className="col-span-2">
+                      <Field label="Street Address" icon={MapPin} value={personalDraft.street || ''}
+                        editable={true} onChange={v => setPersonalDraft(d => ({ ...d, street: v }))} />
+                    </div>
+                    <Field label="City" value={personalDraft.city || ''}
+                      editable={true} onChange={v => setPersonalDraft(d => ({ ...d, city: v }))} />
+                    <Field label="State" value={personalDraft.state || ''}
+                      editable={true} onChange={v => setPersonalDraft(d => ({ ...d, state: v }))} />
+                    <div className="col-span-2">
+                      <Field label="Zip Code" value={personalDraft.zipCode || ''}
+                        editable={true} onChange={v => setPersonalDraft(d => ({ ...d, zipCode: v }))} />
+                    </div>
+                  </>
+                )}
                 <div className="col-span-2">
                   <label className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide mb-1.5" style={{ color: 'var(--fg-muted)' }}>
                     <BadgeCheck size={11} /> Verification Status
@@ -686,18 +921,20 @@ export default function Profile() {
                 </div>
                 <div className="flex flex-col gap-3.5">
                   {[
-                    { key: 'currentPassword', label: 'Current Password' },
-                    { key: 'newPassword', label: 'New Password' },
-                    { key: 'confirmPassword', label: 'Confirm New Password' },
-                  ].map(({ key, label }) => (
+                    { key: 'currentPassword', label: 'Current Password', editMode: false },
+                    { key: 'newPassword', label: 'New Password', editMode: true },
+                    { key: 'confirmPassword', label: 'Confirm New Password', editMode: true },
+                  ]
+                  .filter(f => f.editMode === isEditing('security'))
+                  .map(({ key, label }) => (
                     <div key={key}>
                       <label className="text-[11px] font-semibold uppercase tracking-wide block mb-1.5" style={{ color: 'var(--fg-muted)' }}>
                         {label}
                       </label>
                       <div className="relative">
                         <input
-                          type={showPwd[key] ? 'text' : 'password'}
-                          value={securityDraft[key as keyof SecurityData] as string}
+                          type={!isEditing('security') ? 'password' : (showPwd[key] ? 'text' : 'password')}
+                          value={!isEditing('security') ? '........' : (securityDraft[key as keyof SecurityData] as string)}
                           onChange={e => setSecurityDraft(d => ({ ...d, [key]: e.target.value }))}
                           disabled={!isEditing('security')}
                           placeholder={isEditing('security') ? '••••••••' : ''}
@@ -769,87 +1006,93 @@ export default function Profile() {
             </div>
           )}
 
-          {/* Report History */}
-          {activeTab === 'reports' && (
-            <div className="transition-all duration-300">
-              <div className="flex items-center justify-between pb-4 mb-5" style={{ borderBottom: '1px solid var(--border)' }}>
-                <h2 className="text-[14px] font-bold tracking-tight" style={{ color: 'var(--fg)' }}>Report History</h2>
-                <span className="text-[11px] font-medium px-2.5 py-1 rounded-full"
-                  style={{ backgroundColor: 'var(--bg-hover)', color: 'var(--fg-muted)' }}>
-                  {REPORTS.length} submissions
-                </span>
-              </div>
-
-              {/* Stats */}
-              <div className="grid grid-cols-3 gap-3 mb-5">
-                {[
-                  { label: 'Total', value: REPORTS.length, color: '#1d4ed8', bg: isDark ? '#1e3a5f' : '#eff6ff', border: '#bfdbfe' },
-                  { label: 'Verified', value: REPORTS.filter(r => r.status === 'Verified').length, color: '#15803d', bg: isDark ? '#052e16' : '#f0fdf4', border: '#bbf7d0' },
-                  { label: 'Pending', value: REPORTS.filter(r => r.status === 'Pending').length, color: '#b45309', bg: isDark ? '#3d1a00' : '#fffbeb', border: '#fde68a' },
-                ].map(s => (
-                  <div key={s.label} className="rounded-xl p-4 text-center" style={{ backgroundColor: s.bg, border: `1px solid ${s.border}` }}>
-                    <div className="text-[22px] font-black" style={{ color: s.color }}>{s.value}</div>
-                    <div className="text-[10px] font-semibold uppercase tracking-wider mt-1" style={{ color: s.color + 'bb' }}>{s.label}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Table */}
-              <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
-                {/* Header */}
-                <div
-                  className="grid text-[10px] font-bold uppercase tracking-widest px-4 py-3"
-                  style={{
-                    gridTemplateColumns: '90px 1fr 1fr 105px 85px 85px',
-                    backgroundColor: 'var(--bg-hover)',
-                    borderBottom: '1px solid var(--border)',
-                    color: 'var(--fg-muted)',
-                  }}
-                >
-                  <span>ID</span>
-                  <span>Hazard</span>
-                  <span>Location</span>
-                  <span>Date</span>
-                  <span>Severity</span>
-                  <span>Status</span>
-                </div>
-
-                {REPORTS.map((r, i) => {
-                  const sev = SEV_CFG[r.severity];
-                  const sta = STA_CFG[r.status];
-                  return (
-                    <button
-                      key={r.id}
-                      onClick={() => setSelectedReport(r)}
-                      className="grid w-full px-4 py-3 text-left text-[12px] transition-all"
-                      style={{
-                        gridTemplateColumns: '90px 1fr 1fr 105px 85px 85px',
-                        borderBottom: i < REPORTS.length - 1 ? '1px solid var(--border)' : 'none',
-                        backgroundColor: 'var(--bg-card)',
-                      }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--bg-hover)'; }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--bg-card)'; }}
-                    >
-                      <span className="font-mono font-bold text-[11px]" style={{ color: 'var(--primary)' }}>{r.id}</span>
-                      <span className="font-medium" style={{ color: 'var(--fg)' }}>{r.hazardType}</span>
-                      <span className="truncate pr-2" style={{ color: 'var(--fg-muted)' }}>{r.location}</span>
-                      <span className="text-[11px]" style={{ color: 'var(--fg-muted)' }}>{r.date}</span>
-                      <span>
-                        <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold"
-                          style={{ backgroundColor: sev.bg, color: sev.color, border: `1px solid ${sev.border}` }}>
-                          {r.severity}
-                        </span>
-                      </span>
-                      <span>
-                        <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold"
-                          style={{ backgroundColor: sta.bg, color: sta.color }}>
-                          {r.status}
-                        </span>
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+           {/* Report History */}
+           {activeTab === 'reports' && (
+             <div className="transition-all duration-300">
+               <div className="flex items-center justify-between pb-4 mb-5" style={{ borderBottom: '1px solid var(--border)' }}>
+                 <h2 className="text-[14px] font-bold tracking-tight" style={{ color: 'var(--fg)' }}>Report History</h2>
+                 <span className="text-[11px] font-medium px-2.5 py-1 rounded-full"
+                   style={{ backgroundColor: 'var(--bg-hover)', color: 'var(--fg-muted)' }}>
+                   {reports.length} submissions
+                 </span>
+               </div>
+ 
+               {/* Stats */}
+               <div className="grid grid-cols-3 gap-3 mb-5">
+                 {[
+                   { label: 'Total', value: reports.length, color: '#1d4ed8', bg: isDark ? '#1e3a5f' : '#eff6ff', border: '#bfdbfe' },
+                   { label: 'Verified', value: reports.filter(r => r.status === 'Verified').length, color: '#15803d', bg: isDark ? '#052e16' : '#f0fdf4', border: '#bbf7d0' },
+                   { label: 'Pending', value: reports.filter(r => r.status === 'Pending').length, color: '#b45309', bg: isDark ? '#3d1a00' : '#fffbeb', border: '#fde68a' },
+                 ].map(s => (
+                   <div key={s.label} className="rounded-xl p-4 text-center" style={{ backgroundColor: s.bg, border: `1px solid ${s.border}` }}>
+                     <div className="text-[22px] font-black" style={{ color: s.color }}>{s.value}</div>
+                     <div className="text-[10px] font-semibold uppercase tracking-wider mt-1" style={{ color: s.color + 'bb' }}>{s.label}</div>
+                   </div>
+                 ))}
+               </div>
+ 
+               {/* Table */}
+               <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+                 {/* Header */}
+                 <div
+                   className="grid text-[10px] font-bold uppercase tracking-widest px-4 py-3"
+                   style={{
+                     gridTemplateColumns: '90px 1fr 1fr 105px 85px 85px',
+                     backgroundColor: 'var(--bg-hover)',
+                     borderBottom: '1px solid var(--border)',
+                     color: 'var(--fg-muted)',
+                   }}
+                 >
+                   <span>ID</span>
+                   <span>Hazard</span>
+                   <span>Location</span>
+                   <span>Date</span>
+                   <span>Severity</span>
+                   <span>Status</span>
+                 </div>
+ 
+                 {reports.length === 0 ? (
+                   <div className="text-center py-10 text-[13px] font-medium" style={{ color: 'var(--fg-muted)', backgroundColor: 'var(--bg-card)' }}>
+                     No reports submitted yet.
+                   </div>
+                 ) : (
+                   reports.map((r, i) => {
+                     const sev = SEV_CFG[r.severity];
+                     const sta = STA_CFG[r.status];
+                     return (
+                       <button
+                         key={r.id}
+                         onClick={() => setSelectedReport(r)}
+                         className="grid w-full px-4 py-3 text-left text-[12px] transition-all"
+                         style={{
+                           gridTemplateColumns: '90px 1fr 1fr 105px 85px 85px',
+                           borderBottom: i < reports.length - 1 ? '1px solid var(--border)' : 'none',
+                           backgroundColor: 'var(--bg-card)',
+                         }}
+                         onMouseEnter={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--bg-hover)'; }}
+                         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--bg-card)'; }}
+                       >
+                         <span className="font-mono font-bold text-[11px]" style={{ color: 'var(--primary)' }}>{r.id}</span>
+                         <span className="font-medium" style={{ color: 'var(--fg)' }}>{r.hazardType}</span>
+                         <span className="truncate pr-2" style={{ color: 'var(--fg-muted)' }}>{r.location}</span>
+                         <span className="text-[11px]" style={{ color: 'var(--fg-muted)' }}>{r.date}</span>
+                         <span>
+                           <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                             style={{ backgroundColor: sev.bg, color: sev.color, border: `1px solid ${sev.border}` }}>
+                             {r.severity}
+                           </span>
+                         </span>
+                         <span>
+                           <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                             style={{ backgroundColor: sta.bg, color: sta.color }}>
+                             {r.status}
+                           </span>
+                         </span>
+                       </button>
+                     );
+                   })
+                 )}
+               </div>
             </div>
           )}
         </main>
