@@ -160,9 +160,8 @@ export async function getAnnouncements() {
  *   - Add useEffect in AuthContext that calls getMe() on mount:
  *       useEffect(() => { getMe().then(d => login(d.user)).catch(() => {}) }, [])
  */
-export async function getMe() {
-  // TODO: uncomment when backend route is ready
-  // return fetchWithAuth("/api/user/me");
+export async function getMe(userId) {
+  return fetchWithAuth(`/api/user/${userId}`);
 }
 
 /**
@@ -210,6 +209,40 @@ export async function submitOnboarding(data) {
   });
   return handleResponse(res);
 }
+
+/**
+ * getNationalAlerts
+ *
+ * Fetches all active alerts across India from the Next.js API proxy route.
+ *
+ * @returns {Promise<{ success: boolean, alerts: Alert[] }>}
+ */
+export async function getNationalAlerts() {
+  const res = await fetch("/api/alerts", {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  return handleResponse(res);
+}
+
+/**
+ * getNearbyAlerts
+ *
+ * Fetches active alerts within a specific radius of coordinates.
+ *
+ * @param {number} lat - Latitude
+ * @param {number} lng - Longitude
+ * @param {number} radius - Search radius in kilometers
+ * @returns {Promise<{ success: boolean, alerts: Alert[] }>}
+ */
+export async function getNearbyAlerts(lat, lng, radius) {
+  const res = await fetch(`/api/alerts/nearby?lat=${lat}&lng=${lng}&radius=${radius}`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  return handleResponse(res);
+}
+
 
 export async function getSafetyGuides() {
   const res = await fetch("/api/safety-guides", {

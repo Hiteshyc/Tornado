@@ -59,3 +59,10 @@ export interface SituationStatus {
   title: string
   description: string
 }
+
+export interface LocationState {
+  name: string
+  lat: number
+  lng: number
+  status: Severity
+}

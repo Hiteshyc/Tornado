@@ -152,7 +152,7 @@ export default function OnboardingModal({ isOpen }: OnboardingModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
       {/* Glassmorphic Modal Box Container */}
       <div 
         className="w-full max-w-md rounded-2xl border p-8 shadow-2xl transition-all duration-300"

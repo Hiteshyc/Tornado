@@ -4,10 +4,11 @@ import {
   createContext,
   useContext,
   useState,
+  useEffect,
   useCallback,
   type ReactNode,
 } from "react";
-import { logoutUser } from "../libs/api";
+import { logoutUser, getMe } from "../libs/api";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -138,6 +139,29 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
   const login = useCallback((userData: AuthUser) => {
     setUser(userData);
   }, []);
+
+  /**
+   * Profile hydration — runs whenever `user` changes.
+   * On page refresh, initialUser only carries { id, role } from the JWT.
+   * This effect detects the missing profile fields and fetches the full
+   * profile from the backend, then merges it into user state so that
+   * isOnboarded, location, locationConsent etc. are always populated.
+   */
+  useEffect(() => {
+    if (!user?.id) return;
+    // Skip if the full profile is already hydrated (isOnboarded is defined)
+    if (user.isOnboarded !== undefined) return;
+
+    getMe(user.id)
+      .then((data: any) => {
+        if (data?.user) {
+          setUser((prev) => prev ? { ...prev, ...data.user } : data.user);
+        }
+      })
+      .catch((err: any) => {
+        console.warn("[AuthContext] Profile hydration failed:", err);
+      });
+  }, [user?.id]);
 
   /**
    * logout — clears the user from client state, reverting the Navbar to guest

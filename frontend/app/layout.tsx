@@ -28,6 +28,7 @@ import crypto from "crypto";
 import "./globals.css";
 import Providers from "./providers";
 import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
 
 // ---------------------------------------------------------------------------
 // Font configuration
@@ -253,6 +254,11 @@ export default async function RootLayout({
           <main className="flex-1 flex flex-col">
             {children}
           </main>
+
+          {/*
+           * Footer is rendered at the bottom of the viewport globally.
+           */}
+          <Footer />
         </Providers>
       </body>
     </html>

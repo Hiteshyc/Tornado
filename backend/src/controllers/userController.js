@@ -85,27 +85,46 @@ export const completeOnboarding = asyncHandler(async (req, res) => {
       parseFloat(coordinates.latitude),
     ];
     user.location = newLocation;
-  } else if (newAddress.formattedAddress.trim().length > 10) {
-    // Case B: Geolocation was denied. Geo-encode address manually using Nominatim
-    try {
-      const query = encodeURIComponent(newAddress.formattedAddress);
-      const url = `https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1`;
-      
-      const geocodeRes = await fetch(url, {
-        headers: { "User-Agent": "Coastal-Hazard-Prevention-System" },
-      });
+  } else if (newAddress.city) {
+    // Case B: Geolocation was denied. Geo-encode address using Nominatim
+    // Try precise full address first, then fall back to city + state only
+    const geocodeAttempts = [
+      // Attempt 1: most specific — full formatted address
+      `${newAddress.street ? newAddress.street + ", " : ""}${newAddress.city}, ${newAddress.state}, India`,
+      // Attempt 2: less specific — just city + state (more reliable match)
+      `${newAddress.city}, ${newAddress.state}, India`,
+    ].filter(Boolean);
 
-      if (geocodeRes.ok) {
-        const results = await geocodeRes.json().catch(() => []);
-        if (results && results.length > 0) {
-          const lat = parseFloat(results[0].lat);
-          const lon = parseFloat(results[0].lon);
-          newLocation.coordinates = [lon, lat];
+    let geocoded = false;
+    for (const query of geocodeAttempts) {
+      try {
+        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&countrycodes=in`;
+
+        const geocodeRes = await fetch(url, {
+          headers: { "User-Agent": "Coastal-Hazard-Prevention-System" },
+        });
+
+        if (geocodeRes.ok) {
+          const results = await geocodeRes.json().catch(() => []);
+          if (results && results.length > 0) {
+            const lat = parseFloat(results[0].lat);
+            const lon = parseFloat(results[0].lon);
+            if (!isNaN(lat) && !isNaN(lon)) {
+              newLocation.coordinates = [lon, lat]; // GeoJSON: [lng, lat]
+              geocoded = true;
+              break; // Stop at first successful result
+            }
+          }
         }
+      } catch (err) {
+        console.warn(`[Onboarding Geocoder] Attempt failed for "${query}":`, err.message);
       }
-    } catch (err) {
-      console.warn("[Onboarding Geocoder] Nominatim API geocoding failed: ", err.message);
     }
+
+    if (!geocoded) {
+      console.warn("[Onboarding Geocoder] All geocoding attempts failed. Coordinates left at [0,0].");
+    }
+
     user.location = newLocation;
   }
 

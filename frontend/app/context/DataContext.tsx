@@ -52,18 +52,21 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       // Map rawAlerts to Alert[]
       const alertsList = rawAlerts?.alerts || []
       const mappedAlerts: Alert[] = alertsList.map((a: any) => {
-        const coords = a.location?.coordinates || a.coordinates?.coordinates || [0, 0]
+        // The backend's getAlerts controller already extracts lat/lng as flat fields.
+        // Fall back to nested GeoJSON only if the flat fields are missing (future-proofing).
+        const lat = a.lat ?? a.location?.coordinates?.[1] ?? 0;
+        const lng = a.lng ?? a.location?.coordinates?.[0] ?? 0;
         return {
-          id: a._id,
+          id: a._id || a.id,
           title: a.title,
           severity: a.severity,
           locationName: a.locationName || (typeof a.location === 'string' ? a.location : ''),
           location: a.location,
-          lat: coords[1] ?? 0,
-          lng: coords[0] ?? 0,
+          lat,
+          lng,
           expectedHours: a.expectedHours,
           action: a.action,
-          timestamp: formatRelativeTime(a.createdAt),
+          timestamp: formatRelativeTime(a.createdAt || a.timestamp),
           distance: 8,
         }
       })

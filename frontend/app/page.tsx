@@ -1,8 +1,12 @@
-'use client'
+"use client";
 
 import { useState } from 'react'
-import MapSection from './components/MapSection'
+import dynamic from "next/dynamic";
+import { useTheme } from './context/ThemeContext';
+import type { LocationState } from './types';
 import ActionPanel from './components/ActionPanel'
+
+const MapSection = dynamic(() => import("./components/MapSection"), { ssr: false });
 
 /**
  * Main landing page — same view as post-login/register.
@@ -15,6 +19,14 @@ import ActionPanel from './components/ActionPanel'
  */
 export default function Home() {
   const [showReportForm, setShowReportForm] = useState(false)
+  const { theme } = useTheme();
+  
+  const [currentLocation, setCurrentLocation] = useState<LocationState>({
+    name: "India Summary",
+    lat: 20.5937,
+    lng: 78.9629,
+    status: "safe",
+  });
 
   return (
     <div className="flex flex-col h-full overflow-hidden" style={{ background: 'var(--bg)' }}>
@@ -86,7 +98,11 @@ export default function Home() {
             </div>
           ) : (
             /* Map section */
-            <MapSection />
+            <MapSection
+              theme={theme}
+              currentLocation={currentLocation}
+              onLocationChange={setCurrentLocation}
+            />
           )}
         </div>
 

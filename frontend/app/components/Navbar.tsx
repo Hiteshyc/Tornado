@@ -43,6 +43,7 @@ import {
 
 import { useAuth, type AuthUser } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
+import { useData } from "../context/DataContext";
 import AuthModal from "./AuthModal";
 
 // ---------------------------------------------------------------------------
@@ -167,6 +168,21 @@ function getDisplayName(user: AuthUser | null): string {
   return user.name ?? ROLE_LABELS[user.role] ?? "User";
 }
 
+// Client-side Distance Calculation (Haversine Formula) for localized notifications
+function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // Earth's radius in km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -174,9 +190,70 @@ function getDisplayName(user: AuthUser | null): string {
 export default function Navbar() {
   const { user, login, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { alerts } = useData();
+  const criticalAlertsCount = alerts.filter((a) => a.severity === "critical").length;
 
-  /** Controls whether the profile dropdown is visible. */
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [userCoords, setUserCoords] = useState<[number, number] | null>(null);
+
+  // Resolve user coordinates once after onboarding — GPS preferred, DB fallback
+  useEffect(() => {
+    console.log("Navbar: user =", user);
+    if (!user || !user.isOnboarded) {
+      setUserCoords(null);
+      return;
+    }
+
+    // Only use DB coordinates if they are valid (non-zero)
+    const dbCoords = user.location?.coordinates;
+    const hasValidDbCoords =
+      Array.isArray(dbCoords) &&
+      dbCoords.length === 2 &&
+      (dbCoords[0] !== 0 || dbCoords[1] !== 0);
+
+    if (user.locationConsent && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          console.log("Navbar: Resolved coordinates via GPS =", [pos.coords.latitude, pos.coords.longitude]);
+          setUserCoords([pos.coords.latitude, pos.coords.longitude]);
+        },
+        () => {
+          console.log("Navbar: GPS failed/denied, falling back to DB coordinates =", dbCoords);
+          if (hasValidDbCoords) {
+            setUserCoords([dbCoords[1], dbCoords[0]]); // DB is [lng, lat] → convert to [lat, lng]
+          } else {
+            console.log("Navbar: DB coordinates also invalid [0,0], no vicinity filter applied.");
+            setUserCoords(null);
+          }
+        }
+      );
+    } else if (hasValidDbCoords) {
+      console.log("Navbar: Resolving coordinates via DB coordinates =", dbCoords);
+      setUserCoords([dbCoords[1], dbCoords[0]]); // DB is [lng, lat] → convert to [lat, lng]
+    } else {
+      console.log("Navbar: No valid coordinates available on user profile.");
+      setUserCoords(null);
+    }
+  }, [user]);
+
+  // Filter alerts inside user's local geofence radius (50 km) using resolved coords
+  const vicinityAlerts = userCoords
+    ? alerts.filter((a) => {
+        const dist = getDistance(userCoords[0], userCoords[1], a.lat, a.lng);
+        console.log(`Navbar Alert Distance Trace: "${a.title}" is ${dist.toFixed(2)} km away`);
+        return dist <= 50;
+      })
+    : [];
+
+  // Severity color mappings matching app context variables
+  const SEVERITY_HEX: Record<string, string> = {
+    critical: "#9333ea",
+    high: "#dc2626",
+    moderate: "#ea580c",
+    low: "#ca8a04",
+    safe: "#16a34a",
+  };
 
   /** Controls whether the AuthModal (login/register) is open. */
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -289,7 +366,7 @@ export default function Navbar() {
     <>
       {/* ── Header bar ────────────────────────────────────────────────── */}
       <header
-        className="shrink-0 flex items-center justify-between px-4 z-40 border-b"
+        className="shrink-0 flex items-center justify-between px-4 z-[1001] border-b"
         style={{
           height: "var(--header-h)",
           background: "var(--bg-card)",
@@ -349,8 +426,68 @@ export default function Navbar() {
               className="w-1.5 h-1.5 rounded-full anim-blink"
               style={{ background: "#dc2626" }}
             />
-            2 Critical Alerts
+            {criticalAlertsCount} Critical Alert{criticalAlertsCount === 1 ? "" : "s"}
           </div>
+
+          {/* ── Notification Bell ────────────────────────────────────── */}
+          {user && (
+            <div className="relative">
+              <button
+                onClick={() => setNotificationsOpen(!notificationsOpen)}
+                className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors duration-200 relative cursor-pointer"
+                style={{ color: "var(--fg-muted)", background: "transparent" }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                title="Local warnings feed"
+              >
+                <Bell size={15} />
+                {vicinityAlerts.length > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
+                    <span className="anim-pulse-ring absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600" />
+                  </span>
+                )}
+              </button>
+
+              {notificationsOpen && (
+                <div
+                  className="absolute right-0 mt-2 w-72 rounded-xl p-3 shadow-2xl border flex flex-col z-[10000] animate-scale-up"
+                  style={{
+                    background: "var(--bg-card)",
+                    borderColor: "var(--border)",
+                  }}
+                >
+                  <div className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: "var(--fg)" }}>
+                    Vicinity Warnings ({vicinityAlerts.length})
+                  </div>
+                  {vicinityAlerts.length === 0 ? (
+                    <div className="text-xs text-center py-4" style={{ color: "var(--fg-muted)" }}>
+                      No active threats in your area.
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                      {vicinityAlerts.map((a, idx) => (
+                        <div
+                          key={a.id || a._id || idx}
+                          className="p-2 rounded-lg border-l-4 flex flex-col gap-0.5"
+                          style={{
+                            background: "var(--bg-hover)",
+                            borderLeftColor: SEVERITY_HEX[a.severity] || "var(--border)",
+                          }}
+                        >
+                          <div className="font-semibold text-xs" style={{ color: "var(--fg)" }}>{a.title}</div>
+                          <div className="text-[9px]" style={{ color: "var(--fg-muted)" }}>{a.locationName}</div>
+                          <div className="text-[10px] font-medium mt-1" style={{ color: SEVERITY_HEX[a.severity] }}>
+                            {a.action}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* ── Theme toggle button ───────────────────────────────────── */}
           {/**

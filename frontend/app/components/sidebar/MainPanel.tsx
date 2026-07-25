@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import type { SituationStatus, SidebarView } from '../../types'
 import { SEVERITY_HEX } from '../../types'
+import { useAuth } from '../../context/AuthContext'
 import { useData } from '../../context/DataContext'
 
 interface MainPanelProps {
@@ -19,11 +20,73 @@ function getSituationBg(status: SituationStatus['status']) {
   return { background: hex + '12', border: `1px solid ${hex}28`, color: hex }
 }
 
+// ── Client-side Distance Calculation (Haversine Formula) ───────────────────
+function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // Earth's radius in km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+const SEVERITY_WEIGHT: Record<string, number> = {
+  critical: 5,
+  high: 4,
+  moderate: 3,
+  low: 2,
+  safe: 1,
+}
+
 export default function MainPanel({ onNavigate, onReportClick }: MainPanelProps) {
   const router = useRouter()
-  const { currentSituation, alerts, announcements, loading } = useData()
-  const sit = currentSituation
+  const { user } = useAuth()
+  const { currentSituation: nationalSituation, alerts, announcements, loading } = useData()
+
+  // 1. Determine user coordinates (DB fallback)
+  const dbCoords = user?.location?.coordinates;
+  const hasValidDbCoords =
+    Array.isArray(dbCoords) && dbCoords.length === 2 && (dbCoords[0] !== 0 || dbCoords[1] !== 0);
+
+  // 2. Filter vicinity alerts
+  const vicinityAlerts = hasValidDbCoords
+    ? alerts.filter((a) => getDistance(dbCoords[1], dbCoords[0], a.lat, a.lng) <= 50)
+    : [];
+
+  // 3. Compute localized current situation
+  let sit = nationalSituation; // fallback for guests
+
+  if (user && user.isOnboarded) {
+    if (vicinityAlerts.length > 0) {
+      // Sort vicinity alerts by severity weight (highest first)
+      const sortedVicinity = [...vicinityAlerts].sort(
+        (a, b) => (SEVERITY_WEIGHT[b.severity] || 0) - (SEVERITY_WEIGHT[a.severity] || 0)
+      );
+      const topAlert = sortedVicinity[0];
+      
+      sit = {
+        status: topAlert.severity,
+        title: `${topAlert.severity.toUpperCase()} ALERT ACTIVE`,
+        description: `${topAlert.title} — Expected in ${topAlert.expectedHours}h`,
+      };
+    } else {
+      sit = {
+        status: 'safe',
+        title: 'ALL CLEAR',
+        description: 'No active hazards in your region',
+      };
+    }
+  }
+
   const sitStyle = getSituationBg(sit.status)
+
+  // 4. Use vicinity alerts count for the Action button if user is onboarded
+  const displayAlertsCount = user && user.isOnboarded ? vicinityAlerts.length : alerts.length;
 
   const actions = [
     {
@@ -39,9 +102,9 @@ export default function MainPanel({ onNavigate, onReportClick }: MainPanelProps)
       key: 'alerts' as const,
       icon: Bell,
       label: 'Active Alerts',
-      desc: `${alerts.length} alerts in your region`,
+      desc: `${displayAlertsCount} alerts in your region`,
       color: '#dc2626',
-      badge: String(alerts.length),
+      badge: String(displayAlertsCount),
       onClick: () => router.push('/alerts'),
     },
     {
