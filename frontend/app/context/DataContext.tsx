@@ -51,18 +51,22 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
       // Map rawAlerts to Alert[]
       const alertsList = rawAlerts?.alerts || []
-      const mappedAlerts: Alert[] = alertsList.map((a: any) => ({
-        id: a._id,
-        title: a.title,
-        severity: a.severity,
-        location: a.location,
-        lat: a.coordinates?.coordinates?.[1] ?? 0,
-        lng: a.coordinates?.coordinates?.[0] ?? 0,
-        expectedHours: a.expectedHours,
-        action: a.action,
-        timestamp: formatRelativeTime(a.createdAt),
-        distance: 8,
-      }))
+      const mappedAlerts: Alert[] = alertsList.map((a: any) => {
+        const coords = a.location?.coordinates || a.coordinates?.coordinates || [0, 0]
+        return {
+          id: a._id,
+          title: a.title,
+          severity: a.severity,
+          locationName: a.locationName || (typeof a.location === 'string' ? a.location : ''),
+          location: a.location,
+          lat: coords[1] ?? 0,
+          lng: coords[0] ?? 0,
+          expectedHours: a.expectedHours,
+          action: a.action,
+          timestamp: formatRelativeTime(a.createdAt),
+          distance: 8,
+        }
+      })
 
       // Map rawAnnouncements to Announcement[]
       const announcementsList = rawAnnouncements?.announcements || []

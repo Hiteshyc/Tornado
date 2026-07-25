@@ -128,7 +128,7 @@ export default function AlertsPage() {
                   {/* Meta */}
                   <div className="flex items-center gap-4 text-[10px] font-mono mb-2.5" style={{ color: 'var(--fg-muted)', fontFamily: 'var(--font-mono)' }}>
                     <span className="flex items-center gap-1">
-                      <MapPin size={9} /> {alert.location}
+                      <MapPin size={9} /> {alert.locationName || (typeof alert.location === 'string' ? alert.location : '')}
                     </span>
                     <span className="flex items-center gap-1">
                       <Clock size={9} /> Expected in {alert.expectedHours}h

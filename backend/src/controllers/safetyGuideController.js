@@ -19,14 +19,3 @@ export const getSafetyGuide = asyncHandler(async (req, res) => {
   res.status(200).json({ guide });
 });
 
-/** POST /api/safety-guides  (admin only) */
-export const createSafetyGuide = asyncHandler(async (req, res) => {
-  const guide = await safetyGuideService.create(req.body);
-  res.status(201).json({ guide });
-});
-
-/** PATCH /api/safety-guides/:id  (admin only) */
-export const updateSafetyGuide = asyncHandler(async (req, res) => {
-  const guide = await safetyGuideService.update(req.params.id, req.body);
-  res.status(200).json({ guide });
-});

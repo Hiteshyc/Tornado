@@ -26,7 +26,8 @@ export interface Alert {
   id: number
   title: string
   severity: Severity
-  location: string
+  locationName: string
+  location?: string | { type?: string; coordinates?: number[] }
   lat: number
   lng: number
   expectedHours: number

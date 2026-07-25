@@ -14,15 +14,18 @@ export const alertService = {
     return alert;
   },
 
-  async create({ title, severity, location, lat, lng, expectedHours, action, userId }) {
+  async create({ title, severity, locationName, location, lat, lng, expectedHours, action, userId }) {
+    // Construct GeoJSON Point if lat/lng are provided, otherwise use location object
+    const locationGeoJSON =
+      lat !== undefined && lng !== undefined
+        ? { type: "Point", coordinates: [lng, lat] }
+        : location;
+
     return alertRepository.create({
       title,
       severity,
-      location,
-      coordinates: {
-        type: "Point",
-        coordinates: [lng, lat], // GeoJSON order: [lng, lat]
-      },
+      locationName: locationName || (typeof location === "string" ? location : ""),
+      location: locationGeoJSON,
       expectedHours,
       action,
       createdBy: userId,

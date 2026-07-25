@@ -12,20 +12,20 @@ const alertSchema = new mongoose.Schema(
       enum: ["critical", "high", "moderate", "low", "safe"],
       required: true,
     },
-    location: {
+    locationName: {
       type: String,
       required: true,
       trim: true,
     },
-    // GeoJSON point for geospatial queries later
-    coordinates: {
+    // GeoJSON Point matching User DB schema for geospatial queries
+    location: {
       type: {
         type: String,
         enum: ["Point"],
         default: "Point",
       },
       coordinates: {
-        type: [Number], // [lng, lat]
+        type: [Number], // [longitude, latitude]
         required: true,
       },
     },
@@ -54,8 +54,8 @@ const alertSchema = new mongoose.Schema(
   { timestamps: true } // createdAt used as "timestamp" on the frontend
 );
 
-// 2dsphere index for future location-based queries
-alertSchema.index({ coordinates: "2dsphere" });
+// 2dsphere index for location-based queries
+alertSchema.index({ location: "2dsphere" });
 alertSchema.index({ severity: 1, isActive: 1 });
 
 const Alert = mongoose.model("Alert", alertSchema);
