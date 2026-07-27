@@ -186,6 +186,7 @@ export default function ReportModal({ isOpen, onClose, currentUser, onLoginRequi
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submittedReportId, setSubmittedReportId] = useState("");
 
   // Auto-scroll to error message whenever submitError is set
   useEffect(() => {
@@ -217,7 +218,7 @@ export default function ReportModal({ isOpen, onClose, currentUser, onLoginRequi
     }
   }, [isOpen, isLoggedIn]);
 
-  // Request geolocation when form step mounts
+  // Automatically request geolocation when form step mounts
   useEffect(() => {
     if (step === "form" && !locationGranted && !location) {
       requestLocation();
@@ -320,33 +321,64 @@ export default function ReportModal({ isOpen, onClose, currentUser, onLoginRequi
     return () => previews.forEach((p) => URL.revokeObjectURL(p.url));
   }, [mediaFiles]);
 
-  // Geocode typed address if edited manually
-  useEffect(() => {
-    if (!location || locationGranted) return;
+  // Smart progressive geocoder for manually typed addresses + optional landmark
+  async function searchAddressGeocode(rawAddress, optionalLandmark = "") {
+    if (!rawAddress || rawAddress.trim().length < 3) return null;
 
-    const timer = setTimeout(async () => {
-      if (location.trim().length < 4) return;
+    const queriesToTry = [];
+    const fullAddress = optionalLandmark.trim()
+      ? `${optionalLandmark.trim()}, ${rawAddress.trim()}`
+      : rawAddress.trim();
+
+    // 1) Try landmark + location together first if landmark is provided
+    if (optionalLandmark.trim()) {
+      queriesToTry.push(fullAddress);
+    }
+
+    // 2) Try full location address next
+    const parts = rawAddress.split(",").map((p) => p.trim()).filter(Boolean);
+    queriesToTry.push(parts.join(", "));
+
+    // 3) Progressively drop leading specific names (building/apartment names)
+    for (let i = 1; i < parts.length; i++) {
+      queriesToTry.push(parts.slice(i).join(", "));
+    }
+
+    for (const query of queriesToTry) {
       try {
         const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location.trim())}&limit=1`,
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`,
           { headers: { "Accept-Language": "en" } },
         );
         if (res.ok) {
           const data = await res.json();
           if (data && data.length > 0) {
-            setLocationCoords({
+            return {
               lat: parseFloat(data[0].lat),
               lng: parseFloat(data[0].lon),
-            });
+            };
           }
         }
       } catch {
-        // Geocode network error ignored
+        // Try next fallback level
       }
-    }, 1000);
+    }
+    return null;
+  }
+
+  // Geocode typed address whenever location or landmark changes manually
+  useEffect(() => {
+    if (!location || locationGranted) return;
+
+    const timer = setTimeout(async () => {
+      const coords = await searchAddressGeocode(location, landmark);
+      if (coords) {
+        setLocationCoords(coords);
+      }
+    }, 600);
 
     return () => clearTimeout(timer);
-  }, [location, locationGranted]);
+  }, [location, landmark, locationGranted]);
 
   // ── Geolocation ───────────────────────────────────────────────────────────
   async function requestLocation() {
@@ -451,6 +483,7 @@ export default function ReportModal({ isOpen, onClose, currentUser, onLoginRequi
     setDisclaimerAcknowledged(false);
     setSubmitError("");
     setSubmitSuccess(false);
+    setSubmittedReportId("");
     setSubmitting(false);
     try { localStorage.removeItem(DRAFT_KEY); } catch {}
   }
@@ -540,6 +573,9 @@ export default function ReportModal({ isOpen, onClose, currentUser, onLoginRequi
       }
 
       try { localStorage.removeItem(DRAFT_KEY); } catch {}
+      if (data.reportId) {
+        setSubmittedReportId(data.reportId);
+      }
       setSubmitSuccess(true);
     } catch (err) {
       if (!navigator.onLine) {
@@ -561,26 +597,52 @@ export default function ReportModal({ isOpen, onClose, currentUser, onLoginRequi
   if (submitSuccess) {
     return (
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-in fade-in duration-200"
         onClick={handleClose}
       >
         <div
-          className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-2xl"
+          className="relative w-full max-w-md overflow-hidden rounded-3xl bg-white p-8 text-center shadow-2xl border border-gray-100"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="mb-4 text-5xl">✅</div>
-          <h2 className="mb-2 text-xl font-bold text-gray-900">
+          {/* Top accent line */}
+          <div className="absolute top-0 left-0 right-0 h-2 bg-emerald-500" />
+
+          {/* Animated Success Badge */}
+          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-50 border-8 border-emerald-100/60 shadow-inner">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30">
+              <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+          </div>
+
+          <h2 className="text-2xl font-black text-gray-900 tracking-tight mb-2">
             Report Submitted
           </h2>
-          <p className="mb-6 text-sm text-gray-500">
-            Thank you for reporting. Authorities have been notified and will
-            respond as soon as possible.
+          <p className="text-sm text-gray-600 leading-relaxed mb-6">
+            Thank you for taking action. Emergency dispatch teams have been notified and will process your incident report immediately.
           </p>
+
+          {/* Incident Reference Card */}
+          {submittedReportId && (
+            <div className="mb-6 rounded-2xl bg-gray-50 p-4 border border-gray-200/80 text-left">
+              <div className="flex items-center justify-between text-xs mb-1">
+                <span className="font-semibold text-gray-500 uppercase tracking-wider text-[11px]">Incident Ref ID</span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 font-bold text-emerald-800 text-[10px]">
+                  ● PENDING REVIEW
+                </span>
+              </div>
+              <p className="font-mono text-sm font-bold text-gray-900 tracking-wide select-all">
+                {submittedReportId}
+              </p>
+            </div>
+          )}
+
           <button
             onClick={handleClose}
-            className="w-full rounded-lg bg-black py-2.5 text-sm font-medium text-white hover:bg-gray-800 transition"
+            className="w-full rounded-xl bg-gray-950 py-3.5 text-sm font-bold text-white shadow-lg shadow-gray-950/20 hover:bg-gray-800 transition active:scale-[0.98]"
           >
-            Close
+            Done
           </button>
         </div>
       </div>
@@ -678,9 +740,16 @@ export default function ReportModal({ isOpen, onClose, currentUser, onLoginRequi
         >
           {/* Top error banner */}
           {submitError && (
-            <div className="flex items-center gap-2.5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700 shadow-sm">
-              <span className="text-lg">⚠️</span>
-              <span>{submitError}</span>
+            <div className="flex items-start gap-3 rounded-2xl border border-red-200/80 bg-red-50/90 p-4 shadow-sm backdrop-blur-sm">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-red-600 text-white shadow-sm mt-0.5">
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold uppercase tracking-wider text-red-900 mb-0.5">Attention Required</p>
+                <p className="text-sm font-medium text-red-700 leading-snug">{submitError}</p>
+              </div>
             </div>
           )}
           {/* 1. DISCLAIMER */}
@@ -778,6 +847,17 @@ export default function ReportModal({ isOpen, onClose, currentUser, onLoginRequi
             <label className="block text-sm font-semibold text-gray-700 mb-1">
               Location <span className="text-red-500">*</span>
             </label>
+
+            {/* Show consent note for logged-in users who have denied location access */}
+            {isLoggedIn && currentUser?.locationConsent === false && (
+              <div className="mb-2 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                <span className="mt-0.5 shrink-0">ℹ️</span>
+                <span>
+                  Location access is disabled in your account settings. Please enter your location manually — coordinates will be resolved automatically from the address.
+                </span>
+              </div>
+            )}
+
             {locationLoading ? (
               <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-500">
                 <span className="animate-spin">⟳</span> Detecting location &amp; fetching address…
@@ -788,24 +868,29 @@ export default function ReportModal({ isOpen, onClose, currentUser, onLoginRequi
                   type="text"
                   value={location}
                   onChange={(e) => {
-                    setLocation(e.target.value);
-                    // If user edits manually, clear the GPS data
-                    if (locationGranted) {
-                      setLocationCoords(null);
-                      setLocationAccuracy(null);
-                      setLocationGranted(false);
-                    }
+                    const val = e.target.value;
+                    setLocation(val);
+                    // Clear GPS lock & accuracy so typed address is geocoded cleanly
+                    setLocationGranted(false);
+                    setLocationAccuracy(null);
                   }}
-                  placeholder="Enter address or location manually"
+                  placeholder={
+                    isLoggedIn && currentUser?.locationConsent === false
+                      ? "Enter address (e.g. Ganeshpuri, Mapusa, Goa)"
+                      : "Enter address or location manually"
+                  }
                   className="flex-1 rounded-lg border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black"
                 />
-                <button
-                  type="button"
-                  onClick={requestLocation}
-                  className="shrink-0 rounded-lg border border-gray-300 px-3 py-2.5 text-xs font-medium text-gray-600 hover:border-black hover:text-black transition"
-                >
-                  📍 {locationGranted ? "Re-detect" : "Auto-detect"}
-                </button>
+                {/* Show GPS button only when consent is true or user is a guest */}
+                {(!isLoggedIn || currentUser?.locationConsent === true) && (
+                  <button
+                    type="button"
+                    onClick={requestLocation}
+                    className="shrink-0 rounded-lg border border-gray-300 px-3 py-2.5 text-xs font-medium text-gray-600 hover:border-black hover:text-black transition"
+                  >
+                    📍 {locationGranted ? "Re-detect" : "Auto-detect"}
+                  </button>
+                )}
               </div>
             )}
             {locationCoords && (
@@ -841,6 +926,12 @@ export default function ReportModal({ isOpen, onClose, currentUser, onLoginRequi
               type="text"
               value={landmark}
               onChange={(e) => setLandmark(e.target.value)}
+              onBlur={async () => {
+                if (location && !locationGranted) {
+                  const coords = await searchAddressGeocode(location, landmark);
+                  if (coords) setLocationCoords(coords);
+                }
+              }}
               placeholder="e.g. Near City Park, 200m from the lighthouse"
               className="w-full rounded-lg border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black"
             />
@@ -1059,10 +1150,17 @@ export default function ReportModal({ isOpen, onClose, currentUser, onLoginRequi
           {submitError && (
             <div
               ref={errorRef}
-              className="flex items-center gap-2.5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700 shadow-sm animate-pulse"
+              className="flex items-start gap-3 rounded-2xl border border-red-200/80 bg-red-50/90 p-4 shadow-sm backdrop-blur-sm"
             >
-              <span className="text-lg">⚠️</span>
-              <span>{submitError}</span>
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-red-600 text-white shadow-sm mt-0.5">
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold uppercase tracking-wider text-red-900 mb-0.5">Attention Required</p>
+                <p className="text-sm font-medium text-red-700 leading-snug">{submitError}</p>
+              </div>
             </div>
           )}
         </form>

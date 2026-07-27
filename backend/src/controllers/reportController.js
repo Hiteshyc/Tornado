@@ -1,6 +1,5 @@
 import { getUserReportModel } from "../models/UserReport.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import net from "net";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -8,40 +7,6 @@ function toBool(val) {
   if (typeof val === "boolean") return val;
   if (typeof val === "string") return val.trim().toLowerCase() === "true";
   return Boolean(val);
-}
-
-function isPrivateOrReservedIp(ip) {
-  return (
-    ip === "127.0.0.1" ||
-    ip === "::1" ||
-    /^10\./.test(ip) ||
-    /^192\.168\./.test(ip) ||
-    /^172\.(1[6-9]|2\d|3[0-1])\./.test(ip) ||
-    /^169\.254\./.test(ip) || // link-local
-    ip.startsWith("fc") || ip.startsWith("fd") // IPv6 unique local
-  );
-}
-
-async function lookupIpCoords(ipAddress, isPrivate) {
-  if (!ipAddress || isPrivate) return { lat: null, lng: null };
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 2000); // 2s timeout
-    const ipRes = await fetch(
-      `http://ip-api.com/json/${encodeURIComponent(ipAddress)}?fields=status,lat,lon`,
-      { signal: controller.signal }
-    );
-    clearTimeout(timeout);
-    if (ipRes.ok) {
-      const ipData = await ipRes.json();
-      if (ipData.status === "success") {
-        return { lat: ipData.lat, lng: ipData.lon };
-      }
-    }
-  } catch (err) {
-    console.warn(`IP geolocation failed for ${ipAddress}:`, err.message);
-  }
-  return { lat: null, lng: null };
 }
 
 // POST /api/reports
@@ -67,7 +32,7 @@ export const submitReport = asyncHandler(async (req, res) => {
     guestContact,   // guest only (phone)
     guestEmail,     // guest only (email)
     location,
-    locationCoords,      // raw coordinates provided by GPS / address geocoding
+    locationCoords,      // { lat, lng } from GPS / address geocoding
     locationAccuracy,
     landmark,
     disasterType,
@@ -76,6 +41,13 @@ export const submitReport = asyncHandler(async (req, res) => {
     rescueRequired,
     rescueDetails,
   } = payload;
+
+  // Build GeoJSON Point from locationCoords when available
+  // GeoJSON order is [longitude, latitude]
+  const geoPoint =
+    locationCoords?.lat != null && locationCoords?.lng != null
+      ? { type: "Point", coordinates: [locationCoords.lng, locationCoords.lat] }
+      : undefined;
 
   // ── Auth ───────────────────────────────────────────────────────────────────
   const user   = req.user || null;
@@ -105,24 +77,6 @@ export const submitReport = asyncHandler(async (req, res) => {
     ? req.files.map((f) => f.path)
     : [];
 
-  // ── Client IP & IP Geolocation (purely internal audit fields) ──────────────
-  const rawIp =
-    (Array.isArray(req.headers["x-forwarded-for"])
-      ? req.headers["x-forwarded-for"][0]
-      : req.headers["x-forwarded-for"]?.split(",")[0]
-    )?.trim() ||
-    req.socket?.remoteAddress ||
-    req.ip ||
-    null;
-
-  let ipAddress = rawIp ? rawIp.replace(/^::ffff:/, "") : null;
-  if (ipAddress && net.isIP(ipAddress) === 0) ipAddress = null;
-
-  const ipAddressIsPrivate = ipAddress ? isPrivateOrReservedIp(ipAddress) : false;
-
-  // IP coordinates are looked up for audit storage ONLY — locationCoords is ONLY fed by GPS / frontend address
-  const ipCoords = await lookupIpCoords(ipAddress, ipAddressIsPrivate);
-
   // ── Save report ───────────────────────────────────────────────────────────
   let report;
   try {
@@ -134,14 +88,11 @@ export const submitReport = asyncHandler(async (req, res) => {
       reporterPhone,
       reporterEmail,
 
-      // Location & GPS Coords (fed ONLY by GPS / user address, NOT IP)
+      // Location & GPS Coords (fed ONLY by GPS / user address)
       location,
       locationCoords: locationCoords || { lat: null, lng: null },
       locationAccuracy: locationAccuracy || null,
-
-      // IP Tracking (separate internal fields)
-      ipAddress,
-      ipCoords,
+      geoPoint,   // GeoJSON Point for geospatial queries (undefined if coords unavailable)
 
       landmark: landmark || null,
 

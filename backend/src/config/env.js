@@ -21,7 +21,8 @@ export const env = {
 
   emailUser: process.env.EMAIL_USER,
   gmailAppPassword: process.env.GMAIL_APP_PASSWORD,
-  emailFrom: process.env.EMAIL_FROM || "no-reply@yourapp.com",
+  resendApiKey: process.env.RESEND_API_KEY,
+  emailFrom: process.env.EMAIL_FROM || "onboarding@resend.dev",
 
   otpExpiryMinutes: Number(process.env.OTP_EXPIRY_MINUTES) || 10,
   otpMaxAttempts: Number(process.env.OTP_MAX_ATTEMPTS) || 5,

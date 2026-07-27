@@ -31,7 +31,7 @@ const userReportSchema = new mongoose.Schema(
       default: null,
     },
 
-    // ── Location & IP Tracking ────────────────────────────────────────────────
+    // ── Location ──────────────────────────────────────────────────────────────
     location: {
       type: String,   // 1) human-readable address (editable by user)
       required: true,
@@ -45,16 +45,18 @@ const userReportSchema = new mongoose.Schema(
       type: Number,   // accuracy in metres (e.g. ±15m if GPS used)
       default: null,
     },
-
-    // Hidden internal fields (auto-captured on backend)
-    ipAddress: {
-      type: String,   // 3) client IP address
-      trim: true,
-      default: null,
-    },
-    ipCoords: {
-      lat: { type: Number, default: null },  // 4) latitude & longitude derived from IP address
-      lng: { type: Number, default: null },
+    // GeoJSON Point for geospatial queries (mirrors User.location shape)
+    // Populated from locationCoords on the backend
+    geoPoint: {
+      type: {
+        type: String,
+        enum: ["Point"],
+        default: "Point",
+      },
+      coordinates: {
+        type: [Number],  // [longitude, latitude] — GeoJSON order
+        default: undefined,
+      },
     },
 
     // ── Landmark ──────────────────────────────────────────────────────────────
@@ -118,6 +120,9 @@ const userReportSchema = new mongoose.Schema(
   },
   { timestamps: true }, // also adds createdAt and updatedAt automatically
 );
+
+// 2dsphere index enables MongoDB geospatial queries ($near, $geoWithin etc.)
+userReportSchema.index({ geoPoint: "2dsphere" }, { sparse: true });
 
 // Bind to the Reports DB connection — reuse cached model if already registered
 export function getUserReportModel() {
