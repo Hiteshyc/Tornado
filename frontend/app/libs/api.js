@@ -100,3 +100,101 @@ export async function resetPassword({
   });
   return handleResponse(res);
 }
+
+// =============================================================================
+// ── User session & profile ────────────────────────────────────────────────────
+// The three functions below are NEW additions for the navbar phase.
+// They correspond to the three new backend routes added in the backend phase:
+//   POST  /api/auth/logout         → logoutUser()
+//   GET   /api/user/me             → getMe()
+//   PATCH /api/user/preferences    → updatePreferences()
+// =============================================================================
+
+/**
+ * logoutUser
+ *
+ * Asks the server to clear the httpOnly `token` and `refreshToken` cookies,
+ * ending the authenticated session on both client and server.
+ *
+ * Called by AuthContext.logout() before resetting user state.
+ *
+ * @returns {Promise<void>}
+ */
+export async function logoutUser() {
+  const res = await fetch("/api/auth/logout", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
+  return handleResponse(res);
+}
+
+/**
+ * getMe
+ *
+ * Fetches the currently authenticated user's profile from the server.
+ * The httpOnly `token` cookie is sent automatically by the browser on
+ * same-origin requests — no manual Authorization header is needed.
+ *
+ * Returns an object shaped like AuthUser in AuthContext.tsx:
+ *   { id, name, email, role, profileImage, preferences: { theme } }
+ *
+ * Called on app mount inside AuthContext to restore a session after a
+ * page refresh (so the user doesn't need to log in again).
+ *
+ * TODO (backend phase):
+ *   - Create GET /api/user/me in userController.js (protected route)
+ *   - Add useEffect in AuthContext that calls getMe() on mount:
+ *       useEffect(() => { getMe().then(d => login(d.user)).catch(() => {}) }, [])
+ */
+export async function getMe() {
+  // TODO: uncomment when backend route is ready
+  // return fetchWithAuth("/api/user/me");
+}
+
+/**
+ * updatePreferences
+ *
+ * Persists the user's UI preferences (currently just theme) to their DB record.
+ * Keeps the theme consistent when the user logs in from a different device.
+ *
+ * Called by ThemeContext.toggleTheme() after updating localStorage — only when
+ * the user is authenticated (no-op for guests).
+ *
+ * @param {{ theme: "light"|"dark" }} preferences — preference fields to update
+ *
+ * TODO (backend phase):
+ *   - Create PATCH /api/user/preferences in userController.js (protected route)
+ *   - Call this inside ThemeContext.toggleTheme() when user is not null:
+ *       if (user) updatePreferences({ theme: nextTheme })
+ */
+export async function updatePreferences({ theme }) {
+  // TODO: uncomment when backend route is ready
+  // return fetchWithAuth("/api/user/preferences", {
+  //   method: "PATCH",
+  //   body: JSON.stringify({ theme }),
+  // });
+}
+
+/**
+ * submitOnboarding
+ *
+ * Submits the user's phone, address, coordinates, and theme preferences to the
+ * Next.js onboarding proxy route, which forwards it to the Express backend.
+ *
+ * @param {Object} data - onboarding dataset
+ * @param {string} data.phone - contact number
+ * @param {Object} data.address - street, city, state, zipCode
+ * @param {Object} [data.coordinates] - lat, lng (optional if location was denied)
+ * @param {Object} [data.preferences] - theme (optional)
+ * @returns {Promise<{ message: string, user: AuthUser }>}
+ */
+export async function submitOnboarding(data) {
+  const res = await fetch("/api/user/onboarding", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(res);
+}
+
+

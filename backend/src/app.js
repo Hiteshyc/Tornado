@@ -8,6 +8,7 @@ import { connectDB, connectReportsDB } from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import tokenRoutes from "./routes/tokenRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
 import { notFound, errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
@@ -31,6 +32,8 @@ app.use("/api/internal/token", tokenRoutes);
 app.get("/health", (req, res) => res.json({ status: "ok" }));
 app.use("/api/auth", authRoutes);
 app.use("/api/reports", reportRoutes);
+app.use("/api/user", userRoutes);
+
 
 // Error handling (must be last)
 app.use(notFound);
