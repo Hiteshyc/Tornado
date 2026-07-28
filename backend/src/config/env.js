@@ -7,6 +7,7 @@ export const env = {
   nodeEnv: process.env.NODE_ENV || "development",
 
   mongoUri: process.env.MONGO_URI_LOGIN,
+  mongoUriReports: process.env.MONGO_URI_REPORTS,
 
   jwtSecret: process.env.JWT_SECRET,
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || "7d",
@@ -20,7 +21,8 @@ export const env = {
 
   emailUser: process.env.EMAIL_USER,
   gmailAppPassword: process.env.GMAIL_APP_PASSWORD,
-  emailFrom: process.env.EMAIL_FROM || "no-reply@yourapp.com",
+  resendApiKey: process.env.RESEND_API_KEY,
+  emailFrom: process.env.EMAIL_FROM || "onboarding@resend.dev",
 
   otpExpiryMinutes: Number(process.env.OTP_EXPIRY_MINUTES) || 10,
   otpMaxAttempts: Number(process.env.OTP_MAX_ATTEMPTS) || 5,
@@ -35,4 +37,9 @@ export const env = {
   maxFailedLoginAttempts: Number(process.env.MAX_FAILED_LOGIN_ATTEMPTS) || 5,
   accountLockDurationMinutes:
     Number(process.env.ACCOUNT_LOCK_DURATION_MINUTES) || 15,
+
+  // Cloudinary
+  cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME,
+  cloudinaryApiKey:    process.env.CLOUDINARY_API_KEY,
+  cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET,
 };

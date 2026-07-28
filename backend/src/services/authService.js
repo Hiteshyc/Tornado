@@ -6,6 +6,21 @@ import { generateRefreshToken } from "../utils/generateToken.js";
 import { generateSalt } from "../utils/generateSalt.js";
 import { ApiError } from "../utils/ApiError.js";
 import { env } from "../config/env.js";
+import User from "../models/User.js";
+
+/** Generate a unique human-readable user code e.g. "WS-A3K9X2" */
+async function generateUserCode() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no confusable chars (0,O,1,I)
+  let code, exists;
+  do {
+    const random = Array.from({ length: 6 }, () =>
+      chars[Math.floor(Math.random() * chars.length)]
+    ).join("");
+    code = `WS-${random}`;
+    exists = await User.findOne({ userCode: code });
+  } while (exists); // retry on collision (extremely rare)
+  return code;
+}
 
 const BCRYPT_COST_FACTOR = env.bcryptCostFactor; // 12
 
@@ -35,12 +50,14 @@ export const authService = {
     const passwordHash = await bcrypt.hash(password + salt, BCRYPT_COST_FACTOR);
 
     // Step 5: Store user
+    const userCode = await generateUserCode();
     const user = await userRepository.create({
       name,
       email,
       phone,
       passwordHash,
       salt,
+      lastLogin: new Date(),
     });
 
     // Step 6: Issue access token
@@ -95,7 +112,7 @@ export const authService = {
     }
 
     // Successful login: reset attempts and update lastLogin
-    await userRepository.resetLoginAttempts(user._id);
+    const loggedInUser = await userRepository.resetLoginAttempts(user._id);
 
     // Issue access token
     const token = await requestAccessToken(user._id.toString(), user.role);
@@ -103,7 +120,23 @@ export const authService = {
     // Issue refresh token: revoke any previous sessions, then persist new one
     const { refreshToken } = await issueAndStoreRefreshToken(user._id);
 
-    return { user: sanitizeUser(user), token, refreshToken };
+    return { user: sanitizeUser(loggedInUser), token, refreshToken };
+  },
+
+  async logout(userId) {
+    if (!userId) {
+      throw new ApiError(400, "User ID is required for logout");
+    }
+    // Revoke all active refresh tokens for the user in the database
+    await refreshTokenRepository.revokeByUserId(userId);
+  },
+
+  async logout(userId) {
+    if (!userId) {
+      throw new ApiError(400, "User ID is required for logout");
+    }
+    // Revoke all active refresh tokens for the user in the database
+    await refreshTokenRepository.revokeByUserId(userId);
   },
 };
 
@@ -134,6 +167,7 @@ async function issueAndStoreRefreshToken(userId) {
 function sanitizeUser(user) {
   return {
     id: user._id,
+    userCode: user.userCode,
     name: user.name,
     email: user.email,
     phone: user.phone,
@@ -141,5 +175,10 @@ function sanitizeUser(user) {
     isVerified: user.isVerified,
     profileImage: user.profileImage,
     lastLogin: user.lastLogin,
+    preferences: user.preferences || { theme: "light" },
+    isOnboarded: user.isOnboarded || false,
+    locationConsent: user.locationConsent || false,
+    address: user.address || null,
+    location: user.location || null,
   };
 }

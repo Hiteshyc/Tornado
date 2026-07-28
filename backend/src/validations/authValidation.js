@@ -5,7 +5,9 @@ export const registerSchema = Joi.object({
   email: Joi.string().email().required(),
   phone: Joi.string()
     .pattern(/^[0-9+\-\s]{7,15}$/)
-    .allow("", null),
+    .optional()
+    .allow("", null)
+    .messages({ "string.pattern.base": "Phone number must be 7–15 digits" }),
   password: Joi.string().min(6).max(128).required(),
 });
 

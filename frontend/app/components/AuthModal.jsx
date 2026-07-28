@@ -10,10 +10,14 @@ import {
 } from "../libs/api";
 
 // modes: "login" | "register" | "forgot-otp" | "forgot-reset"
-export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
-  const [mode, setMode] = useState("login");
+//
+// initialMode — optional prop that sets which tab is active when the modal
+// first opens. Navbar passes "login" or "register" depending on which item
+// the user clicked. Defaults to "login" if not provided.
+export default function AuthModal({ isOpen, onClose, onLoginSuccess, initialMode = "login" }) {
+  const [mode, setMode] = useState(initialMode);
 
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", password: "" });
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
@@ -28,6 +32,18 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
   const [timer, setTimer] = useState(30);
   const [canResend, setCanResend] = useState(false);
   const timerRef = useRef(null);
+
+  // ---- Sync mode to initialMode each time the modal opens ----
+  // When the modal is closed and reopened via a different entry point
+  // (e.g. user clicks "Register" after previously closing from "Login"),
+  // this resets mode to whichever tab the caller requested.
+  useEffect(() => {
+    if (isOpen) {
+      setMode(initialMode);
+      setError("");
+      setInfoMessage("");
+    }
+  }, [isOpen, initialMode]);
 
   // ---- Countdown effect when entering "forgot-otp" mode ----
   useEffect(() => {
@@ -59,7 +75,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
   if (!isOpen) return null;
 
   function resetLocalState() {
-    setForm({ name: "", email: "", password: "" });
+    setForm({ name: "", email: "", phone: "", password: "" });
     setOtp("");
     setNewPassword("");
     setConfirmNewPassword("");
@@ -97,7 +113,14 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
   }
 
   function handleChange(e) {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    let sanitized = value;
+    if (name === "name") {
+      sanitized = value.replace(/[^a-zA-Z\s]/g, "");
+    } else if (name === "phone") {
+      sanitized = value.replace(/[^0-9+\-\s]/g, "");
+    }
+    setForm({ ...form, [name]: sanitized });
   }
 
   // ---- Login / Register ----
@@ -189,7 +212,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50"
       onClick={handleClose}
     >
       <div
@@ -239,13 +262,14 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }) {
             {mode === "register" && (
               <input
                 name="name"
-                placeholder="Name"
+                placeholder="Full Name"
                 value={form.name}
                 onChange={handleChange}
                 required
                 className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
               />
             )}
+
             <input
               name="email"
               type="email"
