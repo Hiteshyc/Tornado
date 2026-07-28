@@ -27,10 +27,13 @@ export async function refreshAccessToken() {
  * the token via /api/auth/refresh and retries the request once.
  */
 export async function fetchWithAuth(url, options = {}) {
-  const headers = {
-    "Content-Type": "application/json",
-    ...options.headers,
-  };
+  const headers = { ...options.headers };
+  
+  // Only set application/json if no Content-Type is provided and we have a body
+  // that isn't FormData (FormData needs browser to set boundary automatically)
+  if (!headers["Content-Type"] && !(options.body instanceof FormData)) {
+    headers["Content-Type"] = "application/json";
+  }
 
   let res = await fetch(url, { ...options, headers });
 
@@ -101,6 +104,13 @@ export async function resetPassword({
   return handleResponse(res);
 }
 
+export async function getAlerts(severity = "all") {
+  const res = await fetch(`/api/alerts?severity=${severity}`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  return handleResponse(res);
+}
 // =============================================================================
 // ── User session & profile ────────────────────────────────────────────────────
 // The three functions below are NEW additions for the navbar phase.
@@ -128,6 +138,13 @@ export async function logoutUser() {
   return handleResponse(res);
 }
 
+export async function getAnnouncements() {
+  const res = await fetch("/api/announcements", {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  return handleResponse(res);
+}
 /**
  * getMe
  *
@@ -146,9 +163,15 @@ export async function logoutUser() {
  *   - Add useEffect in AuthContext that calls getMe() on mount:
  *       useEffect(() => { getMe().then(d => login(d.user)).catch(() => {}) }, [])
  */
-export async function getMe() {
-  // TODO: uncomment when backend route is ready
-  // return fetchWithAuth("/api/user/me");
+export async function getMe(userId) {
+  return fetchWithAuth(`/api/user/${userId}`);
+}
+
+export async function updateUserProfile(userId, data) {
+  return fetchWithAuth(`/api/user/${userId}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
 }
 
 /**
@@ -197,4 +220,59 @@ export async function submitOnboarding(data) {
   return handleResponse(res);
 }
 
+/**
+ * getNationalAlerts
+ *
+ * Fetches all active alerts across India from the Next.js API proxy route.
+ *
+ * @returns {Promise<{ success: boolean, alerts: Alert[] }>}
+ */
+export async function getNationalAlerts() {
+  const res = await fetch("/api/alerts", {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  return handleResponse(res);
+}
 
+/**
+ * getNearbyAlerts
+ *
+ * Fetches active alerts within a specific radius of coordinates.
+ *
+ * @param {number} lat - Latitude
+ * @param {number} lng - Longitude
+ * @param {number} radius - Search radius in kilometers
+ * @returns {Promise<{ success: boolean, alerts: Alert[] }>}
+ */
+export async function getNearbyAlerts(lat, lng, radius) {
+  const res = await fetch(`/api/alerts/nearby?lat=${lat}&lng=${lng}&radius=${radius}`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  return handleResponse(res);
+}
+
+
+export async function getSafetyGuides() {
+  const res = await fetch("/api/safety-guides", {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  return handleResponse(res);
+}
+
+export async function getUserReports(userId) {
+  return fetchWithAuth(`/api/user/${userId}/reports`, {
+    method: "GET",
+  });
+}
+
+export async function uploadProfileImage(userId, formData) {
+  // We don't set Content-Type header here because fetch will automatically
+  // set it to multipart/form-data with the correct boundary when body is FormData.
+  return fetchWithAuth(`/api/user/${userId}/profile-image`, {
+    method: "PATCH",
+    body: formData,
+  });
+}

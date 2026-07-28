@@ -212,7 +212,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess, initialMode
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50"
       onClick={handleClose}
     >
       <div
@@ -269,19 +269,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess, initialMode
                 className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
               />
             )}
-            {mode === "register" && (
-              <input
-                name="phone"
-                type="tel"
-                placeholder="Phone Number *"
-                value={form.phone}
-                onChange={handleChange}
-                required
-                pattern="[0-9+\-\s]{7,15}"
-                title="Enter a valid phone number (7–15 digits)"
-                className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
-              />
-            )}
+
             <input
               name="email"
               type="email"

@@ -1,38 +1,41 @@
 import mongoose from "mongoose";
 import { env } from "./env.js";
-import dns from "dns";
 
-// ── Primary connection: Login database (users, refreshtokens) ──────────────
+let reportsDbConnection = null;
+
 export async function connectDB() {
   try {
-    dns.setServers(["8.8.8.8", "1.1.1.1"]);
-    await mongoose.connect(env.mongoUri);
-    console.log("Login DB connected");
+    const uri = env.mongoUri || process.env.MONGO_URI;
+    if (!uri) {
+      throw new Error("MONGO_URI / MONGO_URI_LOGIN is not set");
+    }
+    await mongoose.connect(uri);
+    console.log("MongoDB connected (Primary/Login)");
   } catch (err) {
-    console.error("Login DB connection failed:", err.message);
+    console.error("MongoDB primary connection failed:", err.message);
     process.exit(1);
   }
 }
-
-// ── Secondary connection: Reports database (User_Reports) ──────────────────
-// Using createConnection so it is completely separate from the Login connection
-let reportsDb;
 
 export async function connectReportsDB() {
   try {
-    dns.setServers(["8.8.8.8", "1.1.1.1"]);
-    reportsDb = await mongoose.createConnection(env.mongoUriReports).asPromise();
-    console.log("Reports DB connected");
+    const uri = env.mongoUriReports || process.env.MONGO_URI_REPORTS || env.mongoUri || process.env.MONGO_URI;
+    if (!uri) {
+      throw new Error("MONGO_URI_REPORTS is not set");
+    }
+    reportsDbConnection = await mongoose.createConnection(uri).asPromise();
+    console.log("MongoDB connected (Secondary/Reports)");
+    return reportsDbConnection;
   } catch (err) {
-    console.error("Reports DB connection failed:", err.message);
+    console.error("MongoDB secondary connection failed:", err.message);
     process.exit(1);
   }
 }
 
-// Export so models can bind to this specific connection
 export function getReportsDb() {
-  if (!reportsDb) {
-    throw new Error("Reports DB not connected yet. Call connectReportsDB() first.");
+  if (!reportsDbConnection) {
+    const uri = env.mongoUriReports || process.env.MONGO_URI_REPORTS || env.mongoUri || process.env.MONGO_URI;
+    reportsDbConnection = mongoose.createConnection(uri);
   }
-  return reportsDb;
+  return reportsDbConnection;
 }

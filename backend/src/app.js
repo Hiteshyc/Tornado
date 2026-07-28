@@ -7,8 +7,12 @@ import { env } from "./config/env.js";
 import { connectDB, connectReportsDB } from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import tokenRoutes from "./routes/tokenRoutes.js";
-import reportRoutes from "./routes/reportRoutes.js";
+import alertRoutes from "./routes/alertRoutes.js";
+import announcementRoutes from "./routes/announcementRoutes.js";
+import safetyGuideRoutes from "./routes/safetyGuideRoutes.js";
+
 import userRoutes from "./routes/userRoutes.js";
+import reportRoutes from "./routes/reportRoutes.js";
 import { notFound, errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
@@ -31,8 +35,11 @@ app.use("/api/internal/token", tokenRoutes);
 // Routes
 app.get("/health", (req, res) => res.json({ status: "ok" }));
 app.use("/api/auth", authRoutes);
-app.use("/api/reports", reportRoutes);
+app.use("/api/alerts", alertRoutes);
+app.use("/api/announcements", announcementRoutes);
+app.use("/api/safety-guides", safetyGuideRoutes);
 app.use("/api/user", userRoutes);
+app.use("/api/reports", reportRoutes);
 
 
 // Error handling (must be last)

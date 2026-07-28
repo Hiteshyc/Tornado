@@ -17,10 +17,9 @@ const userReportSchema = new mongoose.Schema(
       type: String,
       trim: true,
       default: null,
-      match: [/^[A-Za-z]+(?:[ '-][A-Za-z]+)*$/,"Please enter a valid name", ],
     },
     reporterPhone: {
-      type: Number,
+      type: String,
       trim: true,
       default: null,
     },
@@ -31,7 +30,7 @@ const userReportSchema = new mongoose.Schema(
       default: null,
     },
 
-    // ── Location ──────────────────────────────────────────────────────────────
+    // ── Location & IP Tracking ────────────────────────────────────────────────
     location: {
       type: String,   // 1) human-readable address (editable by user)
       required: true,
@@ -45,8 +44,6 @@ const userReportSchema = new mongoose.Schema(
       type: Number,   // accuracy in metres (e.g. ±15m if GPS used)
       default: null,
     },
-    // GeoJSON Point for geospatial queries (mirrors User.location shape)
-    // Populated from locationCoords on the backend
     geoPoint: {
       type: {
         type: String,
@@ -57,6 +54,17 @@ const userReportSchema = new mongoose.Schema(
         type: [Number],  // [longitude, latitude] — GeoJSON order
         default: undefined,
       },
+    },
+
+    // Hidden internal fields (auto-captured on backend)
+    ipAddress: {
+      type: String,   // 3) client IP address
+      trim: true,
+      default: null,
+    },
+    ipCoords: {
+      lat: { type: Number, default: null },  // 4) latitude & longitude derived from IP address
+      lng: { type: Number, default: null },
     },
 
     // ── Landmark ──────────────────────────────────────────────────────────────
@@ -71,14 +79,12 @@ const userReportSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
-      // e.g. "Flood", "Cyclone", "Tsunami", "Other: Custom text"
     },
     severity: {
       type: Number,
       required: true,
       min: 1,
       max: 5,
-      // 1=Very Low, 2=Low, 3=Moderate, 4=High, 5=Critical
     },
     description: {
       type: String,
@@ -98,14 +104,12 @@ const userReportSchema = new mongoose.Schema(
     },
 
     // ── Media ─────────────────────────────────────────────────────────────────
-    // URLs to uploaded files (stored after uploading to cloud storage later)
     mediaUrls: {
       type: [String],
       default: [],
     },
 
     // ── Timestamp ─────────────────────────────────────────────────────────────
-    // Auto-captured on submit — user never sees or enters this
     submittedAt: {
       type: Date,
       default: Date.now,
@@ -118,14 +122,16 @@ const userReportSchema = new mongoose.Schema(
       default: "pending",
     },
   },
-  { timestamps: true }, // also adds createdAt and updatedAt automatically
+  { timestamps: true },
 );
 
 // 2dsphere index enables MongoDB geospatial queries ($near, $geoWithin etc.)
 userReportSchema.index({ geoPoint: "2dsphere" }, { sparse: true });
 
-// Bind to the Reports DB connection — reuse cached model if already registered
 export function getUserReportModel() {
   const db = getReportsDb();
   return db.models.UserReport || db.model("UserReport", userReportSchema, "User_Reports");
 }
+
+const UserReport = getUserReportModel();
+export default UserReport;

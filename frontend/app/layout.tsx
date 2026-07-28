@@ -30,6 +30,7 @@ import "./globals.css";
 import Providers from "./providers";
 import Navbar from "./components/Navbar";
 import ReportButton from "./components/ReportButton";
+import Footer from "./components/Footer";
 
 // ---------------------------------------------------------------------------
 // Font configuration
@@ -150,8 +151,8 @@ async function decodeSessionToken(): Promise<any | null> {
         if (profileData && profileData.user) {
           return profileData.user;
         }
-      } 
-    } catch (err: any) {}
+      }
+    } catch (err: any) { }
 
     // Fallback: return basic info decoded from the token payload
     return { id: payload.id, role: payload.role };
@@ -207,7 +208,7 @@ export const metadata: Metadata = {
 export default async function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: React.ReactNode
 }>) {
   /**
    * Decode the JWT cookie server-side.
@@ -258,15 +259,11 @@ export default async function RootLayout({
           </main>
 
           {/*
-           * ReportButton — fixed floating button (bottom-right corner).
-           * Visible on every page. Opens ReportModal; gates on auth if needed.
-           * Priority: your report feature is always accessible globally.
+           * Footer is rendered at the bottom of the viewport globally.
            */}
-          <div style={{ position: "fixed", bottom: "24px", right: "24px", zIndex: 9999 }}>
-            <ReportButton />
-          </div>
+          <Footer />
         </Providers>
       </body>
     </html>
-  );
+  )
 }

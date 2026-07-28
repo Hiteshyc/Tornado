@@ -20,8 +20,9 @@
  *   updates to the user's saved preference after login.
  */
 
-import { ThemeProvider } from "./contexts/ThemeContext";
-import { AuthProvider, type AuthUser, useAuth } from "./contexts/AuthContext";
+import { ThemeProvider } from "./context/ThemeContext";
+import { AuthProvider, type AuthUser, useAuth } from "./context/AuthContext";
+import { DataProvider } from "./context/DataContext";
 import OnboardingModal from "./components/OnboardingModal";
 import type { ReactNode } from "react";
 
@@ -78,7 +79,9 @@ export default function Providers({ children, initialUser }: ProvidersProps) {
        * theme preference once user.preferences.theme is populated after login.
        */}
       <ThemeProvider>
-        <OnboardingWrapper>{children}</OnboardingWrapper>
+        <DataProvider>
+          <OnboardingWrapper>{children}</OnboardingWrapper>
+        </DataProvider>
       </ThemeProvider>
     </AuthProvider>
   );

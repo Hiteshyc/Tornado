@@ -134,7 +134,7 @@ function getLocationString(coords) {
 //   currentUser   – object | null  (pass the authenticated user if available)
 //                   Expected shape: { name, phone, email, _id }
 // ---------------------------------------------------------------------------
-export default function ReportModal({ isOpen, onClose, currentUser, onLoginRequired }) {
+export default function ReportModal({ isOpen, onClose, currentUser = null, onLoginRequired = null }) {
   // ── Guest gate ────────────────────────────────────────────────────────────
   // "gate" | "form"
   const [step, setStep] = useState("gate");
@@ -597,7 +597,7 @@ export default function ReportModal({ isOpen, onClose, currentUser, onLoginRequi
   if (submitSuccess) {
     return (
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-in fade-in duration-200"
+        className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-in fade-in duration-200"
         onClick={handleClose}
       >
         <div
@@ -653,7 +653,7 @@ export default function ReportModal({ isOpen, onClose, currentUser, onLoginRequi
   if (!isLoggedIn && step === "gate") {
     return (
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+        className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 p-4"
         onClick={handleClose}
       >
         <div
@@ -708,7 +708,7 @@ export default function ReportModal({ isOpen, onClose, currentUser, onLoginRequi
   // ── Main report form ──────────────────────────────────────────────────────
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 p-4"
       onClick={handleClose}
     >
       <div
