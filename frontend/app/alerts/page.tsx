@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation'
 import type { Severity } from '../types'
 import { SEVERITY_HEX, SEVERITY_LABEL } from '../types'
 import { useData } from '../context/DataContext'
+import { useAuth } from '../context/AuthContext'
+import { useEffect } from 'react'
 
 // ── Severity badge ──────────────────────────────────────────
 function SevBadge({ severity }: { severity: Severity }) {
@@ -25,7 +27,23 @@ function SevBadge({ severity }: { severity: Severity }) {
 export default function AlertsPage() {
   const router = useRouter()
   const { alerts } = useData()
+  const { user, isLoading } = useAuth()
   const [filter, setFilter] = useState<Severity | 'all'>('all')
+
+  useEffect(() => {
+    if (!isLoading && (!user || user.role !== 'officer')) {
+      router.push('/')
+    }
+  }, [user, isLoading, router])
+
+  if (isLoading || !user || user.role !== 'officer') {
+    return (
+      <div className="flex min-h-screen items-center justify-center" style={{ background: 'var(--bg)', color: 'var(--fg)' }}>
+        <div className="text-sm font-mono opacity-50">Checking access...</div>
+      </div>
+    )
+  }
+
   const severities: Array<Severity | 'all'> = ['all', 'critical', 'high', 'moderate', 'low', 'safe']
 
   const filtered = filter === 'all' ? alerts : alerts.filter(a => a.severity === filter)

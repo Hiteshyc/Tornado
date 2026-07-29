@@ -235,23 +235,7 @@ export async function getNationalAlerts() {
   return handleResponse(res);
 }
 
-/**
- * getNearbyAlerts
- *
- * Fetches active alerts within a specific radius of coordinates.
- *
- * @param {number} lat - Latitude
- * @param {number} lng - Longitude
- * @param {number} radius - Search radius in kilometers
- * @returns {Promise<{ success: boolean, alerts: Alert[] }>}
- */
-export async function getNearbyAlerts(lat, lng, radius) {
-  const res = await fetch(`/api/alerts/nearby?lat=${lat}&lng=${lng}&radius=${radius}`, {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-  });
-  return handleResponse(res);
-}
+
 
 
 export async function getSafetyGuides() {
