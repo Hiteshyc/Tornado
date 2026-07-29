@@ -98,7 +98,7 @@ export default function MainPanel({ onNavigate, onReportClick }: MainPanelProps)
       badge: null,
       onClick: onReportClick,
     },
-    {
+    ...(user?.role === 'officer' ? [{
       key: 'alerts' as const,
       icon: Bell,
       label: 'Active Alerts',
@@ -106,7 +106,7 @@ export default function MainPanel({ onNavigate, onReportClick }: MainPanelProps)
       color: '#dc2626',
       badge: String(displayAlertsCount),
       onClick: () => router.push('/alerts'),
-    },
+    }] : []),
     {
       key: 'safety' as const,
       icon: BookOpen,

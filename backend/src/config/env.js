@@ -35,4 +35,7 @@ export const env = {
   maxFailedLoginAttempts: Number(process.env.MAX_FAILED_LOGIN_ATTEMPTS) || 5,
   accountLockDurationMinutes:
     Number(process.env.ACCOUNT_LOCK_DURATION_MINUTES) || 15,
+  cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME,
+  cloudinaryApiKey: process.env.CLOUDINARY_API_KEY,
+  cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET,
 };

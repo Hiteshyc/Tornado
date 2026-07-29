@@ -1,6 +1,10 @@
 import { userRepository } from "../repositories/userRepository.js";
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import bcrypt from "bcryptjs";
+import { generateSalt } from "../utils/generateSalt.js";
+import { env } from "../config/env.js";
+import UserReport from "../models/UserReport.js";
 
 /**
  * GET /api/user/:userId
@@ -30,6 +34,10 @@ export const getUserProfile = asyncHandler(async (req, res) => {
       locationConsent: user.locationConsent || false,
       address: user.address || null,
       location: user.location || null,
+      dob: user.dob || null,
+      gender: user.gender || null,
+      emergency: user.emergency || { bloodGroup: null, medicalConditions: null, specialAssistance: false },
+      lastLogin: user.lastLogin || null,
     },
   });
 });
@@ -148,6 +156,185 @@ export const completeOnboarding = asyncHandler(async (req, res) => {
       locationConsent: user.locationConsent,
       address: user.address,
       location: user.location,
+      dob: user.dob || null,
+      gender: user.gender || null,
+      emergency: user.emergency || { bloodGroup: null, medicalConditions: null, specialAssistance: false },
+      lastLogin: user.lastLogin || null,
+    },
+  });
+});
+
+/**
+ * PATCH /api/user/:userId
+ *
+ * Controller function to update user profile details.
+ */
+export const updateUserProfile = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  const loggedInUserId = req.user._id;
+
+  // Ensure users can only update their own profile
+  if (userId !== loggedInUserId.toString()) {
+    throw new ApiError(403, "You are not authorized to update this profile");
+  }
+
+  const user = await userRepository.findById(userId);
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  const { name, phone, dob, gender, address, emergency, password } = req.body;
+
+  if (password) {
+    const salt = generateSalt(name || user.name, user.email);
+    const passwordHash = await bcrypt.hash(password + salt, env.bcryptCostFactor);
+    user.passwordHash = passwordHash;
+    user.salt = salt;
+  }
+
+  if (name !== undefined) user.name = name;
+  if (phone !== undefined) user.phone = phone;
+  if (dob !== undefined) user.dob = dob;
+  if (gender !== undefined) user.gender = gender;
+  
+  if (address !== undefined) {
+    const formattedAddress = address.formattedAddress || `${address.street || ""}, ${address.city || ""}, ${address.state || ""}, ${address.zipCode || ""}`;
+    // Only update and re-geocode if the address actually changed
+    if (user.address?.formattedAddress !== formattedAddress) {
+      user.address = {
+        street: address.street || "",
+        city: address.city || "",
+        state: address.state || "",
+        zipCode: address.zipCode || "",
+        formattedAddress,
+      };
+
+      // Recalculate coordinates using Nominatim OSM API
+      try {
+        const query = `${formattedAddress}, India`;
+        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&countrycodes=in`;
+        
+        const geocodeRes = await fetch(url, {
+          headers: { "User-Agent": "Coastal-Hazard-Prevention-System" },
+        });
+
+        if (geocodeRes.ok) {
+          const results = await geocodeRes.json().catch(() => []);
+          if (results && results.length > 0) {
+            const lat = parseFloat(results[0].lat);
+            const lon = parseFloat(results[0].lon);
+            if (!isNaN(lat) && !isNaN(lon)) {
+              user.location = {
+                type: "Point",
+                coordinates: [lon, lat], // GeoJSON order: [Lng, Lat]
+              };
+            }
+          }
+        }
+      } catch (err) {
+        console.warn(`[Profile Geocoder] Failed to geocode address "${formattedAddress}":`, err.message);
+      }
+    }
+  }
+
+  if (emergency !== undefined) {
+    user.emergency = {
+      bloodGroup: emergency.bloodGroup || null,
+      medicalConditions: emergency.medicalConditions || null,
+      specialAssistance: emergency.specialAssistance === true,
+    };
+  }
+
+  await user.save();
+
+  res.status(200).json({
+    message: "Profile updated successfully.",
+    user: {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      profileImage: user.profileImage,
+      preferences: user.preferences || { theme: "light" },
+      isOnboarded: user.isOnboarded || false,
+      locationConsent: user.locationConsent || false,
+      address: user.address || null,
+      location: user.location || null,
+      dob: user.dob || null,
+      gender: user.gender || null,
+      emergency: user.emergency || { bloodGroup: null, medicalConditions: null, specialAssistance: false },
+      lastLogin: user.lastLogin || null,
+    },
+  });
+});
+
+/**
+ * GET /api/user/:userId/reports
+ *
+ * Controller function to fetch reports made by a specific user.
+ */
+export const getUserReports = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  const loggedInUserId = req.user._id;
+
+  // Ensure users can only view their own reports
+  if (userId !== loggedInUserId.toString()) {
+    throw new ApiError(403, "You are not authorized to view these reports");
+  }
+
+  const reports = await UserReport.find({ userId }).sort({ createdAt: -1 });
+
+  res.status(200).json({
+    success: true,
+    reports,
+  });
+});
+
+/**
+ * PATCH /api/user/:userId/profile-image
+ *
+ * Controller function to upload a profile image.
+ */
+export const updateProfileImage = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  const loggedInUserId = req.user._id;
+
+  if (userId !== loggedInUserId.toString()) {
+    throw new ApiError(403, "You are not authorized to update this profile");
+  }
+
+  const user = await userRepository.findById(userId);
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  if (!req.file) {
+    throw new ApiError(400, "No image file provided");
+  }
+
+  // The Cloudinary URL is available in req.file.path
+  user.profileImage = req.file.path;
+  await user.save();
+
+  res.status(200).json({
+    message: "Profile image updated successfully.",
+    user: {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      profileImage: user.profileImage,
+      preferences: user.preferences || { theme: "light" },
+      isOnboarded: user.isOnboarded || false,
+      locationConsent: user.locationConsent || false,
+      address: user.address || null,
+      location: user.location || null,
+      dob: user.dob || null,
+      gender: user.gender || null,
+      emergency: user.emergency || { bloodGroup: null, medicalConditions: null, specialAssistance: false },
+      lastLogin: user.lastLogin || null,
     },
   });
 });

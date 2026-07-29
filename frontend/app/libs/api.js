@@ -27,10 +27,13 @@ export async function refreshAccessToken() {
  * the token via /api/auth/refresh and retries the request once.
  */
 export async function fetchWithAuth(url, options = {}) {
-  const headers = {
-    "Content-Type": "application/json",
-    ...options.headers,
-  };
+  const headers = { ...options.headers };
+  
+  // Only set application/json if no Content-Type is provided and we have a body
+  // that isn't FormData (FormData needs browser to set boundary automatically)
+  if (!headers["Content-Type"] && !(options.body instanceof FormData)) {
+    headers["Content-Type"] = "application/json";
+  }
 
   let res = await fetch(url, { ...options, headers });
 
@@ -164,6 +167,13 @@ export async function getMe(userId) {
   return fetchWithAuth(`/api/user/${userId}`);
 }
 
+export async function updateUserProfile(userId, data) {
+  return fetchWithAuth(`/api/user/${userId}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
 /**
  * updatePreferences
  *
@@ -225,23 +235,7 @@ export async function getNationalAlerts() {
   return handleResponse(res);
 }
 
-/**
- * getNearbyAlerts
- *
- * Fetches active alerts within a specific radius of coordinates.
- *
- * @param {number} lat - Latitude
- * @param {number} lng - Longitude
- * @param {number} radius - Search radius in kilometers
- * @returns {Promise<{ success: boolean, alerts: Alert[] }>}
- */
-export async function getNearbyAlerts(lat, lng, radius) {
-  const res = await fetch(`/api/alerts/nearby?lat=${lat}&lng=${lng}&radius=${radius}`, {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-  });
-  return handleResponse(res);
-}
+
 
 
 export async function getSafetyGuides() {
@@ -252,3 +246,17 @@ export async function getSafetyGuides() {
   return handleResponse(res);
 }
 
+export async function getUserReports(userId) {
+  return fetchWithAuth(`/api/user/${userId}/reports`, {
+    method: "GET",
+  });
+}
+
+export async function uploadProfileImage(userId, formData) {
+  // We don't set Content-Type header here because fetch will automatically
+  // set it to multipart/form-data with the correct boundary when body is FormData.
+  return fetchWithAuth(`/api/user/${userId}/profile-image`, {
+    method: "PATCH",
+    body: formData,
+  });
+}

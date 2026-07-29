@@ -58,6 +58,8 @@ export interface AuthUser {
   preferences?: {
     theme: "light" | "dark";
   };
+  /** Timestamp of the user's last successful authentication. */
+  lastLogin?: string | null;
 }
 
 /** Everything consumers of this context can read or call. */
@@ -160,6 +162,7 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
       })
       .catch((err: any) => {
         console.warn("[AuthContext] Profile hydration failed:", err);
+        setUser(null);
       });
   }, [user?.id]);
 
