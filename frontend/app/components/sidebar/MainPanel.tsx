@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import {
-  FileText, Bell, BookOpen, Megaphone, AlertTriangle, ChevronRight,
+  FileText, Bell, BookOpen, Megaphone, AlertTriangle, ChevronRight, Users, Truck
 } from 'lucide-react'
 import type { SituationStatus, SidebarView } from '../../types'
 import { SEVERITY_HEX } from '../../types'
@@ -88,7 +88,7 @@ export default function MainPanel({ onNavigate, onReportClick }: MainPanelProps)
   // 4. Use vicinity alerts count for the Action button if user is onboarded
   const displayAlertsCount = user && user.isOnboarded ? vicinityAlerts.length : alerts.length;
 
-  const actions = [
+  let actions = [
     {
       key: 'report' as const,
       icon: FileText,
@@ -126,6 +126,47 @@ export default function MainPanel({ onNavigate, onReportClick }: MainPanelProps)
       onClick: () => onNavigate('announcements'),
     },
   ]
+
+  if (user?.role === 'officer' || user?.role === 'admin') {
+    actions = [
+      {
+        key: 'team-management' as any,
+        icon: Users,
+        label: 'Team Management',
+        desc: 'Monitor rescue teams',
+        color: '#1a5fc4',
+        badge: null,
+        onClick: () => router.push('/team-management'),
+      },
+      {
+        key: 'alerts' as const,
+        icon: Bell,
+        label: 'Active Alerts',
+        desc: `${displayAlertsCount} active alerts`,
+        color: '#dc2626',
+        badge: String(displayAlertsCount),
+        onClick: () => router.push('/alerts'),
+      },
+      {
+        key: 'deploy' as any,
+        icon: Truck,
+        label: 'Deploy',
+        desc: 'Live operations command center',
+        color: '#ea580c',
+        badge: null,
+        onClick: () => router.push('/deployments'),
+      },
+      {
+        key: 'announcements' as const,
+        icon: Megaphone,
+        label: 'Govt. Announcements',
+        desc: `${announcements.length} new bulletins`,
+        color: '#ca8a04',
+        badge: String(announcements.length),
+        onClick: () => onNavigate('announcements'),
+      },
+    ]
+  }
 
   return (
     <div className="flex flex-col h-full anim-slide-right">
