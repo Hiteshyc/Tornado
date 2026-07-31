@@ -69,6 +69,38 @@ function isTokenExpiredOrMissing(token: string | undefined): boolean {
   }
 }
 
+/**
+ * getRoleFromToken
+ * Extracts the user's role from the JWT payload without verifying the signature.
+ */
+function getRoleFromToken(token: string | undefined): string | null {
+  if (!token) return null;
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const payloadStr = atob(base64);
+    const payload = JSON.parse(payloadStr) as { role?: string };
+    return payload.role || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * isAuthorizedForRoute
+ * Checks if the given role is allowed to access the requested pathname.
+ */
+function isAuthorizedForRoute(pathname: string, role: string | null): boolean {
+  const officerRoutes = ["/team-management"];
+  
+  if (officerRoutes.some(route => pathname.startsWith(route))) {
+    return role === "officer";
+  }
+  
+  return true;
+}
+
 // ---------------------------------------------------------------------------
 // Middleware handler
 // ---------------------------------------------------------------------------
@@ -85,6 +117,12 @@ export async function middleware(request: NextRequest) {
 
   // ── Fast path: token is present and not expired ──────────────────────────
   if (!isTokenExpiredOrMissing(token)) {
+    // RBAC Check
+    const role = getRoleFromToken(token);
+    if (!isAuthorizedForRoute(request.nextUrl.pathname, role)) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+    
     // Nothing to do — layout.tsx will decode this token successfully.
     return NextResponse.next();
   }
@@ -95,6 +133,11 @@ export async function middleware(request: NextRequest) {
 
   if (!refreshToken) {
     // No refresh token either — the visitor is a genuine guest.
+    // If they are trying to access a restricted route as a guest, redirect them
+    if (!isAuthorizedForRoute(request.nextUrl.pathname, null)) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+    
     // Pass through; layout.tsx will return initialUser = null.
     return NextResponse.next();
   }
@@ -108,6 +151,9 @@ export async function middleware(request: NextRequest) {
       "[Middleware] BACKEND_API_URL is not set in frontend/.env — " +
         "cannot attempt token refresh."
     );
+    if (!isAuthorizedForRoute(request.nextUrl.pathname, null)) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
     return NextResponse.next();
   }
 
@@ -141,7 +187,11 @@ export async function middleware(request: NextRequest) {
       console.warn(
         `[Middleware] Refresh attempt failed with status ${refreshRes.status} — clearing session cookies.`
       );
-      const response = NextResponse.next();
+      
+      const response = !isAuthorizedForRoute(request.nextUrl.pathname, null) 
+        ? NextResponse.redirect(new URL("/", request.url))
+        : NextResponse.next();
+        
       response.cookies.delete("token");
       response.cookies.delete("refreshToken");
       return response;
@@ -153,6 +203,9 @@ export async function middleware(request: NextRequest) {
     if (!newAccessToken) {
       // Unexpected: backend returned 200 but no accessToken in the body.
       console.error("[Middleware] Backend refresh returned no accessToken.");
+      if (!isAuthorizedForRoute(request.nextUrl.pathname, null)) {
+        return NextResponse.redirect(new URL("/", request.url));
+      }
       return NextResponse.next();
     }
 
@@ -165,7 +218,12 @@ export async function middleware(request: NextRequest) {
      * /api/auth/refresh/route.js so behaviour is consistent across all
      * token-issuing paths.
      */
-    const response = NextResponse.next();
+    const newRole = getRoleFromToken(newAccessToken);
+    
+    const response = !isAuthorizedForRoute(request.nextUrl.pathname, newRole)
+      ? NextResponse.redirect(new URL("/", request.url))
+      : NextResponse.next();
+      
     response.cookies.set("token", newAccessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -177,8 +235,11 @@ export async function middleware(request: NextRequest) {
     return response;
   } catch (err) {
     // Network error, backend down, JSON parse error, etc.
-    // Fail gracefully — show guest UI rather than crashing.
+    // Fail gracefully — show guest UI rather than crashing, or redirect if restricted.
     console.error("[Middleware] Unexpected error during token refresh:", err);
+    if (!isAuthorizedForRoute(request.nextUrl.pathname, null)) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
     return NextResponse.next();
   }
 }

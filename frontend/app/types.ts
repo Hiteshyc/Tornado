@@ -66,3 +66,29 @@ export interface LocationState {
   lng: number
   status: Severity
 }
+
+// ── Team ────────────────────────────────────────────────────
+export type TeamStatus = 'available' | 'on-mission' | 'travelling' | 'offline'
+export type VehicleType = 'Rescue Boat' | 'Fire Truck' | 'Helicopter' | 'Amphibious Vehicle' | 'Ambulance'
+
+export interface TeamMember {
+  name: string
+  role: string
+  _id?: string
+}
+
+export interface Team {
+  _id: string
+  id?: string
+  name: string
+  leader: string
+  vehicle: VehicleType
+  status: TeamStatus
+  hub: string
+  members: TeamMember[]
+  equipment: string[]
+  gps: { lat: number; lng: number; label: string }
+  missionStatus: string
+  previousMission: string
+  assignedDeploymentId?: string
+}

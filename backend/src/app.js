@@ -1,4 +1,5 @@
 import express from "express";
+import http from "http";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 
@@ -9,11 +10,17 @@ import tokenRoutes from "./routes/tokenRoutes.js";
 import alertRoutes from "./routes/alertRoutes.js";
 import announcementRoutes from "./routes/announcementRoutes.js";
 import safetyGuideRoutes from "./routes/safetyGuideRoutes.js";
+import teamRoutes from "./routes/teamRoutes.js";
 
 import userRoutes from "./routes/userRoutes.js";
 import { notFound, errorHandler } from "./middleware/errorHandler.js";
+import { initSocket } from "./services/socket.js";
 
 const app = express();
+const server = http.createServer(app);
+
+// Initialize Socket.io
+initSocket(server, env.clientUrl);
 
 // Middleware
 app.use(
@@ -32,6 +39,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/alerts", alertRoutes);
 app.use("/api/announcements", announcementRoutes);
 app.use("/api/safety-guides", safetyGuideRoutes);
+app.use("/api/teams", teamRoutes);
 app.use("/api/user", userRoutes);
 
 
@@ -43,7 +51,7 @@ app.use(errorHandler);
 async function startServer() {
   await connectDB();
 
-  app.listen(env.port, () => {
+  server.listen(env.port, () => {
     console.log(
       `Server running in ${env.nodeEnv} mode on http://localhost:${env.port}`,
     );
