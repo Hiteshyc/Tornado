@@ -11,6 +11,7 @@ import alertRoutes from "./routes/alertRoutes.js";
 import announcementRoutes from "./routes/announcementRoutes.js";
 import safetyGuideRoutes from "./routes/safetyGuideRoutes.js";
 import teamRoutes from "./routes/teamRoutes.js";
+import deploymentRoutes from "./routes/deploymentRoutes.js";
 
 import userRoutes from "./routes/userRoutes.js";
 import { notFound, errorHandler } from "./middleware/errorHandler.js";
@@ -38,6 +39,7 @@ app.get("/health", (req, res) => res.json({ status: "ok" }));
 app.use("/api/auth", authRoutes);
 app.use("/api/alerts", alertRoutes);
 app.use("/api/announcements", announcementRoutes);
+app.use("/api/deployments", deploymentRoutes);
 app.use("/api/safety-guides", safetyGuideRoutes);
 app.use("/api/teams", teamRoutes);
 app.use("/api/user", userRoutes);
