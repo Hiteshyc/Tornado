@@ -12,6 +12,16 @@ const alertSchema = new mongoose.Schema(
       enum: ["critical", "high", "moderate", "low", "safe"],
       required: true,
     },
+    district: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    alertType: {
+      type: String,
+      required: true,
+      trim: true,
+    },
     locationName: {
       type: String,
       required: true,
@@ -33,6 +43,22 @@ const alertSchema = new mongoose.Schema(
       type: Number,
       required: true,
       min: 0,
+    },
+    aiConfidence: {
+      type: Number,
+      default: 0,
+    },
+    windSpeed: {
+      type: Number,
+      default: 0,
+    },
+    population: {
+      type: Number,
+      default: 0,
+    },
+    deployedTeams: {
+      type: Number,
+      default: 0,
     },
     // The recommended action text shown on the alert card
     action: {
