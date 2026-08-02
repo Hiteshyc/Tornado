@@ -29,6 +29,7 @@ import "./globals.css";
 import Providers from "./providers";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import { SocketNotifications } from "./components/SocketNotifications";
 
 // ---------------------------------------------------------------------------
 // Font configuration
@@ -259,6 +260,9 @@ export default async function RootLayout({
            * Footer is rendered at the bottom of the viewport globally.
            */}
           <Footer />
+
+          {/* Real-Time Push Notifications */}
+          <SocketNotifications />
         </Providers>
       </body>
     </html>

@@ -118,7 +118,7 @@ export const updateDeployment = asyncHandler(async (req, res) => {
   }
 
   // 2. Handle Status changes
-  if (req.body.status && req.body.status !== oldDeployment.status) {
+  if (req.body.status) {
     const activeTeamIds = req.body.assignedTeamIds || oldDeployment.assignedTeamIds;
     
     if (req.body.status === 'rescue-ongoing') {
@@ -134,7 +134,7 @@ export const updateDeployment = asyncHandler(async (req, res) => {
         { $set: { status: 'available' } }
       );
       // Decrement the alert deployed teams count
-      if (alert && alert.deployedTeams) {
+      if (alert && alert.deployedTeams && req.body.status !== oldDeployment.status) {
         alert.deployedTeams = alert.deployedTeams.filter(id => !activeTeamIds.includes(id.toString()));
       }
     }
@@ -169,7 +169,7 @@ export const updateDeployment = asyncHandler(async (req, res) => {
       }
     }
 
-    if (req.body.status && req.body.status !== oldDeployment.status) {
+    if (req.body.status) {
       const activeTeamIds = (req.body.assignedTeamIds || oldDeployment.assignedTeamIds).map(id => id.toString());
       if (req.body.status === 'rescue-ongoing') {
         io.emit("teams_updated", { teamIds: activeTeamIds, status: 'on-mission' });

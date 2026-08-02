@@ -37,7 +37,7 @@ const deploymentSchema = new mongoose.Schema(
     ],
     status: {
       type: String,
-      enum: ["pending", "en-route", "rescue-ongoing", "completed", "failed"],
+      enum: ["pending", "assigned", "en-route", "rescue-ongoing", "completed", "failed"],
       default: "pending",
     },
     startTime: {
