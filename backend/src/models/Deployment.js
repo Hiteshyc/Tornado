@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 
+import { getOfficerDb } from "../config/db.js";
+
 const missionReportSchema = new mongoose.Schema({
   teamLead: { type: String, required: true },
   completionTime: { type: String, required: true },
@@ -52,4 +54,4 @@ const deploymentSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export const Deployment = mongoose.model("Deployment", deploymentSchema);
+export const Deployment = getOfficerDb().model("Deployment", deploymentSchema);

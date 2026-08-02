@@ -299,6 +299,17 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
 
+  // ── Session expiration listener ───────────────────────────────────────────
+  useEffect(() => {
+    function handleSessionExpired() {
+      // Open the modal on login tab
+      setAuthModalMode("login");
+      setAuthModalOpen(true);
+    }
+    window.addEventListener("session_expired", handleSessionExpired);
+    return () => window.removeEventListener("session_expired", handleSessionExpired);
+  }, []);
+
   // ── Derived values ────────────────────────────────────────────────────────
 
   const role       = getDisplayRole(user);

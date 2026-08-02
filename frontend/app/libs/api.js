@@ -48,6 +48,9 @@ export async function fetchWithAuth(url, options = {}) {
         _isRetry: true,
       });
     } catch (err) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('session_expired'));
+      }
       throw new Error("Session expired. Please log in again.");
     }
   }

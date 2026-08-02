@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 
+import { getOfficerDb } from "../config/db.js";
+
 const alertSchema = new mongoose.Schema(
   {
     title: {
@@ -75,6 +77,6 @@ const alertSchema = new mongoose.Schema(
 
 alertSchema.index({ severity: 1, status: 1 });
 
-const Alert = mongoose.model("Alert", alertSchema);
+const Alert = getOfficerDb().model("Alert", alertSchema);
 
 export default Alert;

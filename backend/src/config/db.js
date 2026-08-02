@@ -30,3 +30,21 @@ export function getReportsDb() {
   }
   return reportsDbConnection;
 }
+
+let officerDbConnection = null;
+
+export function getOfficerDb() {
+  if (!officerDbConnection) {
+    const officerUri = process.env.MONGO_URI_OFFICER || env.mongoUri;
+    officerDbConnection = mongoose.createConnection(officerUri);
+    
+    officerDbConnection.on("connected", () => {
+      console.log("MongoDB connected (Operational/Officer)");
+    });
+    
+    officerDbConnection.on("error", (err) => {
+      console.error("MongoDB operational connection error:", err.message);
+    });
+  }
+  return officerDbConnection;
+}

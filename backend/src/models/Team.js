@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 
+import { getOfficerDb } from "../config/db.js";
+
 const teamMemberSchema = new mongoose.Schema({
   name: { type: String, required: true },
   role: { type: String, required: true },
@@ -36,4 +38,4 @@ const teamSchema = new mongoose.Schema(
   }
 );
 
-export const Team = mongoose.model("Team", teamSchema);
+export const Team = getOfficerDb().model("Team", teamSchema);
