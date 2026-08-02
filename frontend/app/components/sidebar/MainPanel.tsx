@@ -55,7 +55,7 @@ export default function MainPanel({ onNavigate, onReportClick }: MainPanelProps)
 
   // 2. Filter vicinity alerts
   const vicinityAlerts = hasValidDbCoords
-    ? alerts.filter((a) => getDistance(dbCoords[1], dbCoords[0], a.lat, a.lng) <= 50)
+    ? alerts.filter((a) => (a.affectedHubs || []).some(h => getDistance(dbCoords[1], dbCoords[0], h.latitude, h.longitude) <= 50))
     : [];
 
   // 3. Compute localized current situation
@@ -72,7 +72,7 @@ export default function MainPanel({ onNavigate, onReportClick }: MainPanelProps)
       sit = {
         status: topAlert.severity,
         title: `${topAlert.severity.toUpperCase()} ALERT ACTIVE`,
-        description: `${topAlert.title} — Expected in ${topAlert.expectedHours}h`,
+        description: `${topAlert.title} — Expected in ${topAlert.eta}h`,
       };
     } else {
       sit = {

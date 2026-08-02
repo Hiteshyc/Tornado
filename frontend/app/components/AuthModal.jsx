@@ -8,6 +8,7 @@ import {
   verifyOtp,
   resetPassword,
 } from "../libs/api";
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 
 // modes: "login" | "register" | "forgot-otp" | "forgot-reset"
 //
@@ -123,8 +124,10 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess, initialMode
     setLoading(true);
 
     try {
-      const data =
-        mode === "login" ? await loginUser(form) : await registerUser(form);
+      // Wait for the animation to play before loading stuff
+      await new Promise((resolve) => setTimeout(resolve, 2500));
+
+      const data = mode === "login" ? await loginUser(form) : await registerUser(form);
 
       onLoginSuccess(data.user);
       resetLocalState();
@@ -204,203 +207,221 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess, initialMode
   }
 
   return (
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50"
-      onClick={handleClose}
-    >
-      <div
-        className="w-full max-w-sm rounded-xl bg-white p-6 shadow-lg"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="mb-4 flex justify-end">
-          <button
-            onClick={handleClose}
-            className="text-gray-500 hover:text-gray-800"
-          >
-            ✕
-          </button>
-        </div>
-
-        {/* Tab switcher — only shown for login/register, not mid-reset-flow */}
-        {(mode === "login" || mode === "register") && (
-          <div className="mb-6 flex rounded-lg bg-gray-100 p-1">
-            <button
-              type="button"
-              onClick={() => switchMode("login")}
-              className={`flex-1 rounded-md py-2 text-sm font-medium transition ${
-                mode === "login"
-                  ? "bg-white text-black shadow-sm"
-                  : "text-gray-500 hover:text-gray-800"
-              }`}
-            >
-              Log in
-            </button>
-            <button
-              type="button"
-              onClick={() => switchMode("register")}
-              className={`flex-1 rounded-md py-2 text-sm font-medium transition ${
-                mode === "register"
-                  ? "bg-white text-black shadow-sm"
-                  : "text-gray-500 hover:text-gray-800"
-              }`}
-            >
-              Register
-            </button>
-          </div>
-        )}
-
-        {/* ---- LOGIN / REGISTER ---- */}
-        {(mode === "login" || mode === "register") && (
-          <form onSubmit={handleAuthSubmit} className="space-y-3">
-            {mode === "register" && (
-              <input
-                name="name"
-                placeholder="Name"
-                value={form.name}
-                onChange={handleChange}
-                required
-                className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
+    <>
+      {loading && (mode === "login" || mode === "register") ? (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-white">
+          <div className="flex flex-col items-center gap-4 text-center anim-scale-up">
+            <div className="w-64 h-64">
+              <DotLottieReact
+                src="https://lottie.host/12e6a5de-ae20-42f8-8419-88a36f16a395/HgxAH86aAw.json"
+                loop
+                autoplay
               />
-            )}
-            <input
-              name="email"
-              type="email"
-              placeholder="Email"
-              value={form.email}
-              onChange={handleChange}
-              required
-              className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
-            />
-            <input
-              name="password"
-              type="password"
-              placeholder="Password"
-              value={form.password}
-              onChange={handleChange}
-              required
-              minLength={6}
-              className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
-            />
+            </div>
+            <div>
+              <div className="text-xl font-semibold text-black">
+                {mode === "login" ? "Logging in..." : "Creating account..."}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50"
+          onClick={handleClose}
+        >
+          <div
+            className="w-full max-w-sm rounded-xl bg-white p-6 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex justify-end">
+              <button
+                onClick={handleClose}
+                className="text-gray-500 hover:text-gray-800"
+              >
+                ✕
+              </button>
+            </div>
 
-            {mode === "login" && (
-              <div className="text-right">
+            {/* Tab switcher — only shown for login/register, not mid-reset-flow */}
+            {(mode === "login" || mode === "register") && (
+              <div className="mb-6 flex rounded-lg bg-gray-100 p-1">
                 <button
                   type="button"
-                  onClick={handleForgotPasswordClick}
-                  className="text-xs text-gray-500 underline hover:text-gray-800"
+                  onClick={() => switchMode("login")}
+                  className={`flex-1 rounded-md py-2 text-sm font-medium transition ${mode === "login"
+                    ? "bg-white text-black shadow-sm"
+                    : "text-gray-500 hover:text-gray-800"
+                    }`}
                 >
-                  Forgot password?
+                  Log in
+                </button>
+                <button
+                  type="button"
+                  onClick={() => switchMode("register")}
+                  className={`flex-1 rounded-md py-2 text-sm font-medium transition ${mode === "register"
+                    ? "bg-white text-black shadow-sm"
+                    : "text-gray-500 hover:text-gray-800"
+                    }`}
+                >
+                  Register
                 </button>
               </div>
             )}
 
-            {error && <p className="text-sm text-red-500">{error}</p>}
+            {/* ---- LOGIN / REGISTER ---- */}
+            {(mode === "login" || mode === "register") && (
+              <form onSubmit={handleAuthSubmit} className="space-y-3">
+                {mode === "register" && (
+                  <input
+                    name="name"
+                    placeholder="Name"
+                    value={form.name}
+                    onChange={handleChange}
+                    required
+                    className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                  />
+                )}
+                <input
+                  name="email"
+                  type="email"
+                  placeholder="Email"
+                  value={form.email}
+                  onChange={handleChange}
+                  required
+                  className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                />
+                <input
+                  name="password"
+                  type="password"
+                  placeholder="Password"
+                  value={form.password}
+                  onChange={handleChange}
+                  required
+                  minLength={6}
+                  className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                />
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full rounded-md bg-black py-2 text-sm text-white transition hover:bg-gray-800 disabled:opacity-50"
-            >
-              {loading
-                ? mode === "login"
-                  ? "Logging in..."
-                  : "Creating account..."
-                : mode === "login"
-                  ? "Log in"
-                  : "Create account"}
-            </button>
-          </form>
-        )}
+                {mode === "login" && (
+                  <div className="text-right">
+                    <button
+                      type="button"
+                      onClick={handleForgotPasswordClick}
+                      className="text-xs text-gray-500 underline hover:text-gray-800"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
+                )}
 
-        {/* ---- FORGOT PASSWORD: STEP 1 — enter OTP ---- */}
-        {mode === "forgot-otp" && (
-          <form onSubmit={handleOtpSubmit} className="space-y-3">
-            <h2 className="text-lg font-semibold">Enter the code</h2>
-            <p className="text-sm text-gray-500">{infoMessage}</p>
+                {error && <p className="text-sm text-red-500">{error}</p>}
 
-            <input
-              type="text"
-              inputMode="numeric"
-              placeholder="6-digit code"
-              value={otp}
-              onChange={(e) =>
-                setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
-              }
-              required
-              maxLength={6}
-              className="w-full rounded-md border px-3 py-2 text-center text-lg tracking-widest focus:outline-none focus:ring-2 focus:ring-black"
-            />
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full rounded-md bg-black py-2 text-sm text-white transition hover:bg-gray-800 disabled:opacity-50"
+                >
+                  {loading
+                    ? mode === "login"
+                      ? "Logging in..."
+                      : "Creating account..."
+                    : mode === "login"
+                      ? "Log in"
+                      : "Create account"}
+                </button>
+              </form>
+            )}
 
-            {error && <p className="text-sm text-red-500">{error}</p>}
+            {/* ---- FORGOT PASSWORD: STEP 1 — enter OTP ---- */}
+            {mode === "forgot-otp" && (
+              <form onSubmit={handleOtpSubmit} className="space-y-3">
+                <h2 className="text-lg font-semibold">Enter the code</h2>
+                <p className="text-sm text-gray-500">{infoMessage}</p>
 
-            <button
-              type="submit"
-              disabled={loading || otp.length !== 6}
-              className="w-full rounded-md bg-black py-2 text-sm text-white transition hover:bg-gray-800 disabled:opacity-50"
-            >
-              {loading ? "Verifying..." : "Verify code"}
-            </button>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="6-digit code"
+                  value={otp}
+                  onChange={(e) =>
+                    setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
+                  }
+                  required
+                  maxLength={6}
+                  className="w-full rounded-md border px-3 py-2 text-center text-lg tracking-widest focus:outline-none focus:ring-2 focus:ring-black"
+                />
 
-            <div className="flex items-center justify-between text-xs">
-              {!canResend ? (
-                <span className="text-gray-400">Resend code in {timer}s</span>
-              ) : (
-                <span className="text-gray-500">
-                  Code expired? Resend below
-                </span>
-              )}
-              <button
-                type="button"
-                onClick={handleResendOtp}
-                disabled={loading || !canResend}
-                className={`underline transition disabled:opacity-50 ${
-                  canResend
-                    ? "text-gray-700 hover:text-gray-900"
-                    : "text-gray-400 cursor-not-allowed"
-                }`}
-              >
-                {loading ? "Resending..." : "Resend code"}
-              </button>
-            </div>
-          </form>
-        )}
+                {error && <p className="text-sm text-red-500">{error}</p>}
 
-        {/* ---- FORGOT PASSWORD: STEP 3 — new password ---- */}
-        {mode === "forgot-reset" && (
-          <form onSubmit={handleResetPasswordSubmit} className="space-y-3">
-            <h2 className="text-lg font-semibold">Set a new password</h2>
+                <button
+                  type="submit"
+                  disabled={loading || otp.length !== 6}
+                  className="w-full rounded-md bg-black py-2 text-sm text-white transition hover:bg-gray-800 disabled:opacity-50"
+                >
+                  {loading ? "Verifying..." : "Verify code"}
+                </button>
 
-            <input
-              type="password"
-              placeholder="New password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              required
-              minLength={6}
-              className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
-            />
-            <input
-              type="password"
-              placeholder="Confirm new password"
-              value={confirmNewPassword}
-              onChange={(e) => setConfirmNewPassword(e.target.value)}
-              required
-              minLength={6}
-              className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
-            />
+                <div className="flex items-center justify-between text-xs">
+                  {!canResend ? (
+                    <span className="text-gray-400">Resend code in {timer}s</span>
+                  ) : (
+                    <span className="text-gray-500">
+                      Code expired? Resend below
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleResendOtp}
+                    disabled={loading || !canResend}
+                    className={`underline transition disabled:opacity-50 ${canResend
+                      ? "text-gray-700 hover:text-gray-900"
+                      : "text-gray-400 cursor-not-allowed"
+                      }`}
+                  >
+                    {loading ? "Resending..." : "Resend code"}
+                  </button>
+                </div>
+              </form>
+            )}
 
-            {error && <p className="text-sm text-red-500">{error}</p>}
+            {/* ---- FORGOT PASSWORD: STEP 3 — new password ---- */}
+            {mode === "forgot-reset" && (
+              <form onSubmit={handleResetPasswordSubmit} className="space-y-3">
+                <h2 className="text-lg font-semibold">Set a new password</h2>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full rounded-md bg-black py-2 text-sm text-white transition hover:bg-gray-800 disabled:opacity-50"
-            >
-              {loading ? "Updating password..." : "Update password & log in"}
-            </button>
-          </form>
-        )}
-      </div>
-    </div>
+                <input
+                  type="password"
+                  placeholder="New password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                />
+                <input
+                  type="password"
+                  placeholder="Confirm new password"
+                  value={confirmNewPassword}
+                  onChange={(e) => setConfirmNewPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                />
+
+                {error && <p className="text-sm text-red-500">{error}</p>}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full rounded-md bg-black py-2 text-sm text-white transition hover:bg-gray-800 disabled:opacity-50"
+                >
+                  {loading ? "Updating password..." : "Update password & log in"}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+    </>
   );
 }

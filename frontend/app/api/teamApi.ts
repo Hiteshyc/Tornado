@@ -1,25 +1,21 @@
 import type { Team } from '../types'
+import { fetchWithAuth } from '../libs/api'
 
 const API_BASE = 'http://localhost:5000/api'
 
 export async function fetchTeams(): Promise<Team[]> {
-  const res = await fetch(`${API_BASE}/teams`, {
+  const data = await fetchWithAuth(`${API_BASE}/teams`, {
+    method: 'GET',
     credentials: 'include'
   })
-  if (!res.ok) {
-    throw new Error('Failed to fetch teams')
-  }
-  return res.json()
+  return data.teams || data
 }
 
 export async function sendMessage(teamId: string, message: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/teams/${teamId}/message`, {
+  await fetchWithAuth(`${API_BASE}/teams/${teamId}/message`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'include',
     body: JSON.stringify({ message })
   })
-  if (!res.ok) {
-    throw new Error('Failed to send message')
-  }
 }

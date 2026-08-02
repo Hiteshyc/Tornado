@@ -12,53 +12,52 @@ const alertSchema = new mongoose.Schema(
       enum: ["critical", "high", "moderate", "low", "safe"],
       required: true,
     },
-    district: {
+    hazardType: {
       type: String,
       required: true,
       trim: true,
     },
-    alertType: {
-      type: String,
-      required: true,
-      trim: true,
+    confidence: {
+      type: Number,
+      default: 0,
     },
-    locationName: {
+    status: {
       type: String,
-      required: true,
-      trim: true,
+      enum: ["active", "deployment_initiated", "resolved"],
+      default: "active",
     },
-    // GeoJSON Point matching User DB schema for geospatial queries
-    location: {
-      type: {
-        type: String,
-        enum: ["Point"],
-        default: "Point",
+    eta: {
+      type: Number, // Expected hours or timestamp, using Number for simplicity
+      required: true,
+    },
+    affectedHubs: [
+      {
+        hubId: String,
+        hubName: String,
+        latitude: Number,
+        longitude: Number,
+        priority: Number,
+        estimatedPopulation: Number,
+        requiredRescueCapacity: Number,
+        requiredResources: [String],
       },
-      coordinates: {
-        type: [Number], // [longitude, latitude]
-        required: true,
+    ],
+    reportId: { type: String },
+    reportUrl: { type: String },
+    deploymentStatus: {
+      type: String,
+      enum: ["pending", "deployed"],
+      default: "pending",
+    },
+    deployedTeams: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Team",
       },
-    },
-    expectedHours: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-    aiConfidence: {
-      type: Number,
-      default: 0,
-    },
-    windSpeed: {
-      type: Number,
-      default: 0,
-    },
-    population: {
-      type: Number,
-      default: 0,
-    },
-    deployedTeams: {
-      type: Number,
-      default: 0,
+    ],
+    createdByAI: {
+      type: Boolean,
+      default: true,
     },
     // The recommended action text shown on the alert card
     action: {
@@ -66,23 +65,15 @@ const alertSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
-    // Whether this alert is currently visible to users
-    isActive: {
-      type: Boolean,
-      default: true,
-    },
-    // The admin/authority user who created this alert
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
   },
-  { timestamps: true } // createdAt used as "timestamp" on the frontend
+  { timestamps: true }
 );
 
-// 2dsphere index for location-based queries
-alertSchema.index({ location: "2dsphere" });
-alertSchema.index({ severity: 1, isActive: 1 });
+alertSchema.index({ severity: 1, status: 1 });
 
 const Alert = mongoose.model("Alert", alertSchema);
 

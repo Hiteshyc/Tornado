@@ -8,7 +8,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
  * Fetches all active alerts (used for guest view or national summary).
  */
 export const getAlerts = asyncHandler(async (req, res) => {
-  const alerts = await Alert.find({ isActive: true }).sort({ createdAt: -1 });
+  const alerts = await Alert.find({ status: { $ne: "resolved" } }).sort({ createdAt: -1 });
   
   res.status(200).json({
     success: true,
@@ -16,17 +16,17 @@ export const getAlerts = asyncHandler(async (req, res) => {
       id: a._id,
       title: a.title,
       severity: a.severity,
-      district: a.district,
-      alertType: a.alertType,
-      locationName: a.locationName,
-      lat: a.location?.coordinates?.[1] ?? 0,
-      lng: a.location?.coordinates?.[0] ?? 0,
-      expectedHours: a.expectedHours,
+      hazardType: a.hazardType,
+      confidence: a.confidence,
+      status: a.status,
+      eta: a.eta,
+      affectedHubs: a.affectedHubs,
+      reportId: a.reportId,
+      reportUrl: a.reportUrl,
+      deploymentStatus: a.deploymentStatus,
+      deployedTeams: a.deployedTeams?.length || 0,
       action: a.action,
-      aiConfidence: a.aiConfidence,
-      windSpeed: a.windSpeed,
-      population: a.population,
-      deployedTeams: a.deployedTeams,
+      createdByAI: a.createdByAI,
       timestamp: a.createdAt,
     })),
   });
@@ -35,13 +35,13 @@ export const getAlerts = asyncHandler(async (req, res) => {
 /**
  * PATCH /api/alerts/:id/resolve
  *
- * Marks an alert as inactive (resolved).
+ * Marks an alert as resolved.
  */
 export const resolveAlert = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const alert = await Alert.findByIdAndUpdate(
     id,
-    { isActive: false },
+    { status: "resolved" },
     { new: true }
   );
 

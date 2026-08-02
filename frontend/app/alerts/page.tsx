@@ -9,13 +9,15 @@ import type { Severity } from '../types'
 import { SEVERITY_HEX, SEVERITY_LABEL } from '../types'
 import { useAuth } from '../context/AuthContext'
 import { fetchAlerts, resolveAlert } from '../api/alertApi'
+import { createDeployment } from '../api/deploymentApi'
 import type { OfficerAlert } from '../data/officerData'
+import { DotLottieReact } from '@lottiefiles/dotlottie-react'
 
 const AlertMap = dynamic(() => import('../components/AlertMap'), { ssr: false, loading: () => <div className="w-full h-full bg-slate-900 animate-pulse rounded-xl border border-slate-800" /> })
 
 const SEV_OPTS: Array<Severity | 'all'> = ['all', 'critical', 'high', 'moderate', 'low']
 const TYPE_OPTS = ['All Types', 'Cyclone', 'Storm Surge', 'Flood', 'High Tide', 'Tsunami', 'Lightning']
-const DIST_OPTS = ['All Districts', 'North Goa', 'South Goa', 'Sindhudurg', 'Ratnagiri']
+const HUB_OPTS = ['All Hubs', 'Panaji Coast', 'Vasco Port', 'Sindhudurg Coast', 'Ponda', 'Ratnagiri District', 'Karwar Harbor']
 
 function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
   return (
@@ -45,8 +47,8 @@ function InfoCell({ icon: Icon, label, value, warn }: {
   )
 }
 
-function AlertCard({ alert, index, onDeploy, onResolve }: {
-  alert: OfficerAlert; index: number; onDeploy: (a: OfficerAlert) => void; onResolve: (id: string) => Promise<void>
+function AlertCard({ alert, index, onDeploy, onResolve, onHover, isHovered }: {
+  alert: OfficerAlert; index: number; onDeploy: (a: OfficerAlert) => void; onResolve: (id: string) => Promise<void>; onHover: (id: string | null) => void; isHovered: boolean;
 }) {
   const [isResolving, setIsResolving] = useState(false)
   const color = SEVERITY_HEX[alert.severity] || '#666'
@@ -65,12 +67,18 @@ function AlertCard({ alert, index, onDeploy, onResolve }: {
 
   return (
     <div
+      onMouseEnter={() => onHover(alert.id)}
+      onMouseLeave={() => onHover(null)}
       className={`rounded-xl border overflow-hidden anim-stagger-in ${isCritical ? 'pulse-critical' : ''}`}
       style={{
-        background: 'var(--bg-card)',
-        borderColor: isCritical ? color : 'var(--border)',
-        borderLeft: `3px solid ${color}`,
+        background: isHovered ? 'var(--bg-hover)' : 'var(--bg-card)',
+        borderTopColor: isCritical ? color : (isHovered ? 'var(--primary)' : 'var(--border)'),
+        borderRightColor: isCritical ? color : (isHovered ? 'var(--primary)' : 'var(--border)'),
+        borderBottomColor: isCritical ? color : (isHovered ? 'var(--primary)' : 'var(--border)'),
+        borderLeftColor: color,
+        borderLeftWidth: '3px',
         animationDelay: `${index * 0.06}s`,
+        cursor: 'pointer',
       }}
     >
       {/* Card header */}
@@ -83,7 +91,7 @@ function AlertCard({ alert, index, onDeploy, onResolve }: {
             🚨 {alert.title}
           </div>
           <div className="flex items-center gap-2 mt-1 text-[10px] font-mono" style={{ color: 'var(--fg-muted)' }}>
-            <MapPin size={9} /> {alert.locationName}
+            <MapPin size={9} /> {alert.affectedHubs?.[0]?.hubName || 'Unknown'} {alert.affectedHubs?.length > 1 ? `(+${alert.affectedHubs.length - 1})` : ''}
             <span style={{ color: 'var(--border-strong)' }}>·</span>
             <Clock size={9} /> {new Date(alert.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </div>
@@ -99,10 +107,10 @@ function AlertCard({ alert, index, onDeploy, onResolve }: {
 
       {/* Stats row */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-0 divide-x divide-y sm:divide-y-0" style={{ borderColor: 'var(--border)' }}>
-        <InfoCell icon={MapPin} label="Location" value={alert.district || 'Unknown'} />
-        <InfoCell icon={Bot} label="AI Confidence" value={`${alert.aiConfidence || 0}%`} />
-        <InfoCell icon={Wind} label="Wind Speed" value={`${alert.windSpeed || 0} km/h`} warn={(alert.windSpeed || 0) > 80} />
-        <InfoCell icon={Users} label="Population" value={`${((alert.population || 0) / 1000).toFixed(0)}k`} />
+        <InfoCell icon={MapPin} label="Primary Hub" value={alert.affectedHubs?.[0]?.hubName || 'Unknown'} />
+        <InfoCell icon={Bot} label="AI Confidence" value={`${alert.confidence || 0}%`} />
+        <InfoCell icon={Clock} label="ETA" value={`${alert.eta || 0} hrs`} warn={(alert.eta || 0) < 6} />
+        <InfoCell icon={Users} label="Total Population" value={`${((alert.affectedHubs?.reduce((acc, h) => acc + h.estimatedPopulation, 0) || 0) / 1000).toFixed(0)}k`} />
       </div>
 
       {/* Footer */}
@@ -145,51 +153,23 @@ function AlertCard({ alert, index, onDeploy, onResolve }: {
   )
 }
 
-function DeployModal({ alert, onClose, onConfirm }: {
-  alert: OfficerAlert
-  onClose: () => void
-  onConfirm: () => void
-}) {
+function DeployingOverlay({ alert }: { alert: OfficerAlert }) {
   const color = SEVERITY_HEX[alert.severity] || '#666'
   return (
     <div
       className="fixed inset-0 z-[1000] flex items-center justify-center p-4 anim-backdrop"
-      style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(8px)' }}
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+      style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }}
     >
-      <div
-        className="w-full max-w-sm rounded-2xl overflow-hidden anim-scale-up"
-        style={{
-          background: 'var(--bg-card)',
-          border: `1px solid ${color}80`,
-          boxShadow: `0 8px 32px 0 ${color}20`,
-        }}
-      >
-        <div className="px-5 py-4 border-b" style={{ borderColor: 'var(--border)', background: color + '15' }}>
-          <div className="text-sm font-semibold" style={{ color: 'var(--fg)' }}>
-            Deploy Team — {alert.title}
-          </div>
-          <div className="text-[10px] mt-0.5 font-mono" style={{ color: 'var(--fg-muted)' }}>
-            {alert.locationName}
-          </div>
+      <div className="flex flex-col items-center gap-4 text-center anim-scale-up">
+        <div className="w-64 h-64">
+          <DotLottieReact
+            src="https://lottie.host/43e250bc-0551-4471-a513-e10883ae2a2c/Goe8bONmik.json"
+            loop
+            autoplay
+          />
         </div>
-        <div className="px-5 py-4 text-sm" style={{ color: 'var(--fg-muted)' }}>
-          You will be redirected to the <span style={{ color: 'var(--fg)', fontWeight: 500 }}>Deployments</span> workspace
-          to assign and manage teams for this operation.
-        </div>
-        <div className="flex gap-2 px-5 pb-4">
-          <button
-            onClick={onClose}
-            className="flex-1 py-2 rounded-xl text-xs border transition-colors"
-            style={{ borderColor: 'var(--border)', color: 'var(--fg-muted)' }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-          >Cancel</button>
-          <button
-            onClick={onConfirm}
-            className="flex-1 py-2 rounded-xl text-xs font-semibold"
-            style={{ background: color, color: '#fff' }}
-          >Go to Deployments →</button>
+        <div>
+          <div className="text-xl font-semibold text-white">Deploying Teams...</div>
         </div>
       </div>
     </div>
@@ -199,14 +179,15 @@ function DeployModal({ alert, onClose, onConfirm }: {
 export default function AlertsPage() {
   const router = useRouter()
   const { user, isLoading: authLoading } = useAuth()
-  
+
   const [alerts, setAlerts] = useState<OfficerAlert[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [search, setSearch]       = useState('')
+  const [search, setSearch] = useState('')
   const [sevFilter, setSevFilter] = useState<Severity | 'all'>('all')
   const [typeFilter, setTypeFilter] = useState('All Types')
-  const [distFilter, setDistFilter] = useState('All Districts')
+  const [hubFilter, setHubFilter] = useState('All Hubs')
   const [deployTarget, setDeployTarget] = useState<OfficerAlert | null>(null)
+  const [hoveredAlertId, setHoveredAlertId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!authLoading && (!user || (user.role !== 'officer' && user.role !== 'admin'))) {
@@ -250,8 +231,23 @@ export default function AlertsPage() {
     setAlerts(prev => prev.filter(a => a.id !== alertId))
   }
 
+  const handleDeployAction = async (alert: OfficerAlert) => {
+    setDeployTarget(alert)
+    try {
+      // Ensure the animation plays for at least 2.5 seconds
+      await Promise.all([
+        createDeployment(alert.id),
+        new Promise(resolve => setTimeout(resolve, 2500))
+      ])
+    } catch (e) {
+      console.error('Failed to create deployment:', e)
+    }
+    setDeployTarget(null)
+    router.push(`/deployments?alertId=${alert.id}`)
+  }
+
   const stats = useMemo(() => ({
-    active:   alerts.length,
+    active: alerts.length,
     critical: alerts.filter(a => a.severity === 'critical').length,
     moderate: alerts.filter(a => a.severity === 'moderate').length,
     advisory: alerts.filter(a => a.severity === 'low' || a.severity === 'safe').length,
@@ -259,12 +255,17 @@ export default function AlertsPage() {
 
   const filtered = useMemo(() => alerts.filter(a => {
     const q = search.toLowerCase()
-    if (q && !a.title.toLowerCase().includes(q) && !(a.locationName || '').toLowerCase().includes(q)) return false
+    if (q && !a.title.toLowerCase().includes(q) && !(a.affectedHubs?.some(h => h.hubName.toLowerCase().includes(q)))) return false
     if (sevFilter !== 'all' && a.severity !== sevFilter) return false
-    if (typeFilter !== 'All Types' && a.alertType !== typeFilter) return false
-    if (distFilter !== 'All Districts' && a.district !== distFilter) return false
+    if (typeFilter !== 'All Types' && a.hazardType !== typeFilter) return false
+    if (hubFilter !== 'All Hubs' && !(a.affectedHubs?.some(h => h.hubName === hubFilter))) return false
     return true
-  }), [alerts, search, sevFilter, typeFilter, distFilter])
+  }), [alerts, search, sevFilter, typeFilter, hubFilter])
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = 'unset'; }
+  }, []);
 
   if (authLoading || !user || (user.role !== 'officer' && user.role !== 'admin')) {
     return (
@@ -275,7 +276,7 @@ export default function AlertsPage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-var(--nav-h))] overflow-hidden p-4 sm:p-6 lg:p-8">
+    <div className="flex flex-col h-[calc(100dvh-var(--header-h))] overflow-hidden p-4 sm:p-6 lg:p-8">
       <style>{`
         @keyframes pulseCritical {
           0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
@@ -293,7 +294,7 @@ export default function AlertsPage() {
       >
         <div className="flex items-center gap-4">
           <button
-            onClick={() => router.back()}
+            onClick={() => router.push('/')}
             className="w-8 h-8 rounded-xl flex items-center justify-center transition-colors"
             style={{ color: 'var(--fg-muted)', border: '1px solid var(--border)' }}
             onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
@@ -318,13 +319,13 @@ export default function AlertsPage() {
       </div>
 
       <div className="flex-1 overflow-hidden flex flex-col gap-5 px-6 py-5 rounded-b-xl border-x border-b" style={{ borderColor: 'var(--border)', background: 'var(--bg-panel)' }}>
-        
+
         {/* Top Level: Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 shrink-0">
-          <StatCard label="Active Alerts" value={stats.active}   color="var(--primary)" />
-          <StatCard label="Critical"       value={stats.critical} color="#9333ea" />
-          <StatCard label="Moderate"       value={stats.moderate} color="#ea580c" />
-          <StatCard label="Advisory"       value={stats.advisory} color="#ca8a04" />
+          <StatCard label="Active Alerts" value={stats.active} color="var(--primary)" />
+          <StatCard label="Critical" value={stats.critical} color="#9333ea" />
+          <StatCard label="Moderate" value={stats.moderate} color="#ea580c" />
+          <StatCard label="Advisory" value={stats.advisory} color="#ca8a04" />
         </div>
 
         {/* Top Level: Filters */}
@@ -379,12 +380,12 @@ export default function AlertsPage() {
           </select>
 
           <select
-            value={distFilter}
-            onChange={e => setDistFilter(e.target.value)}
+            value={hubFilter}
+            onChange={e => setHubFilter(e.target.value)}
             className="px-2.5 py-1.5 rounded-lg text-xs outline-none"
             style={{ background: 'var(--bg-hover)', border: '1px solid var(--border)', color: 'var(--fg)', fontFamily: 'var(--font-sans)' }}
           >
-            {DIST_OPTS.map(o => <option key={o} value={o}>{o}</option>)}
+            {HUB_OPTS.map(o => <option key={o} value={o}>{o}</option>)}
           </select>
         </div>
 
@@ -407,8 +408,10 @@ export default function AlertsPage() {
                     key={a.id}
                     alert={a}
                     index={i}
-                    onDeploy={setDeployTarget}
+                    onDeploy={handleDeployAction}
                     onResolve={handleResolveAlert}
+                    onHover={setHoveredAlertId}
+                    isHovered={hoveredAlertId === a.id}
                   />
                 ))
               )}
@@ -420,22 +423,14 @@ export default function AlertsPage() {
             {isLoading ? (
               <div className="w-full h-full bg-slate-900 animate-pulse" />
             ) : (
-              <AlertMap alerts={filtered} />
+              <AlertMap alerts={filtered} hoveredAlertId={hoveredAlertId} />
             )}
           </div>
         </div>
       </div>
 
       {deployTarget && (
-        <DeployModal
-          alert={deployTarget}
-          onClose={() => setDeployTarget(null)}
-          onConfirm={() => {
-            const id = deployTarget.id
-            setDeployTarget(null)
-            router.push(`/deployments?alertId=${id}`)
-          }}
-        />
+        <DeployingOverlay alert={deployTarget} />
       )}
     </div>
   )

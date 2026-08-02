@@ -246,9 +246,11 @@ export default function Navbar() {
   // Filter alerts inside user's local geofence radius (50 km) using resolved coords
   const vicinityAlerts = userCoords
     ? alerts.filter((a) => {
-        const dist = getDistance(userCoords[0], userCoords[1], a.lat, a.lng);
-        console.log(`Navbar Alert Distance Trace: "${a.title}" is ${dist.toFixed(2)} km away`);
-        return dist <= 50;
+        return (a.affectedHubs || []).some(h => {
+          const dist = getDistance(userCoords[0], userCoords[1], h.latitude, h.longitude);
+          console.log(`Navbar Alert Distance Trace: "${a.title}" hub "${h.hubName}" is ${dist.toFixed(2)} km away`);
+          return dist <= 50;
+        });
       })
     : [];
 
@@ -506,7 +508,7 @@ export default function Navbar() {
                           }}
                         >
                           <div className="font-semibold text-xs" style={{ color: "var(--fg)" }}>{a.title}</div>
-                          <div className="text-[9px]" style={{ color: "var(--fg-muted)" }}>{a.locationName}</div>
+                          <div className="text-[9px]" style={{ color: "var(--fg-muted)" }}>{a.affectedHubs?.[0]?.hubName || 'Unknown Hub'}</div>
                           <div className="text-[10px] font-medium mt-1" style={{ color: SEVERITY_HEX[a.severity] }}>
                             {a.action}
                           </div>

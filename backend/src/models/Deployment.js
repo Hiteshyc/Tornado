@@ -26,8 +26,8 @@ const deploymentSchema = new mongoose.Schema(
       enum: ["critical", "high", "moderate", "low", "safe"],
       required: true,
     },
-    aiConfidence: { type: Number, default: 0 },
-    windSpeed: { type: Number, default: 0 },
+    confidence: { type: Number, default: 0 },
+    hazardType: { type: String, required: true },
     
     assignedTeamIds: [
       {

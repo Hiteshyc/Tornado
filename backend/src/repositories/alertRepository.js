@@ -3,7 +3,7 @@ import Alert from "../models/Alert.js";
 export const alertRepository = {
   /** Get all active alerts, newest first */
   findAll({ severity } = {}) {
-    const filter = { isActive: true };
+    const filter = { status: { $ne: "resolved" } };
     if (severity && severity !== "all") filter.severity = severity;
     return Alert.find(filter).sort({ createdAt: -1 });
   },

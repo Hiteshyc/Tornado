@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, Suspense, useEffect } from 'react'
+import { useState, useMemo, Suspense, useEffect, useRef } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { io } from 'socket.io-client'
 import {
@@ -323,14 +323,16 @@ function ReportField({ label, value, highlight }: { label: string; value: string
 }
 
 // ── Deployment Card ─────────────────────────────────────────
-function DeploymentCard({ dep, index, allDeployments, allTeams, onUpdate }: {
+function DeploymentCard({ dep, index, allDeployments, allTeams, onUpdate, onTeamUpdate, expanded, onToggle }: {
   dep: LiveDeployment
   index: number
   allDeployments: LiveDeployment[]
   allTeams: Team[]
   onUpdate: (id: string, patch: Partial<LiveDeployment>) => void
+  onTeamUpdate: (teamIds: string[], status: Team['status']) => void
+  expanded: boolean
+  onToggle: () => void
 }) {
-  const [expanded, setExpanded] = useState(false)
   const [showReport, setShowReport] = useState(false)
   const [relocateTeam, setRelocateTeam] = useState<string | null>(null)
   const [updatingStatus, setUpdatingStatus] = useState(false)
@@ -344,10 +346,14 @@ function DeploymentCard({ dep, index, allDeployments, allTeams, onUpdate }: {
 
   const handleDeploy = async (teamId: string) => {
     const updatedIds = [...dep.assignedTeamIds, teamId]
+    // Optimistic: immediately mark team as travelling in local state
+    onTeamUpdate([teamId], 'travelling')
     try {
       await updateDeployment(dep.id, { assignedTeamIds: updatedIds })
       onUpdate(dep.id, { assignedTeamIds: updatedIds })
     } catch (e) {
+      // Rollback on failure
+      onTeamUpdate([teamId], 'available')
       console.error(e)
     }
   }
@@ -358,7 +364,8 @@ function DeploymentCard({ dep, index, allDeployments, allTeams, onUpdate }: {
     // Add to target
     const targetDep = allDeployments.find(d => d.id === toDepId)
     const targetUpdated = [...(targetDep?.assignedTeamIds || []), teamId]
-    
+    // Optimistic: team remains travelling (just relocated)
+    onTeamUpdate([teamId], 'travelling')
     setRelocateTeam(null)
     try {
       await updateDeployment(dep.id, { assignedTeamIds: currentUpdated })
@@ -372,6 +379,13 @@ function DeploymentCard({ dep, index, allDeployments, allTeams, onUpdate }: {
 
   const handleStatusUpdate = async () => {
     setUpdatingStatus(true)
+    const activeTeamIds = dep.assignedTeamIds
+    // Optimistic: update team statuses based on new operation status
+    if (newStatus === 'rescue-ongoing') {
+      onTeamUpdate(activeTeamIds, 'on-mission')
+    } else if (newStatus === 'completed' || newStatus === 'failed') {
+      onTeamUpdate(activeTeamIds, 'available')
+    }
     try {
       await updateDeployment(dep.id, { status: newStatus })
       onUpdate(dep.id, { status: newStatus })
@@ -396,7 +410,7 @@ function DeploymentCard({ dep, index, allDeployments, allTeams, onUpdate }: {
       <div
         className="flex items-start justify-between gap-3 px-4 py-3 cursor-pointer border-b"
         style={{ borderColor: 'var(--border)', background: color + '06' }}
-        onClick={() => setExpanded(p => !p)}
+        onClick={onToggle}
       >
         <div>
           <div className="text-sm font-semibold flex items-center gap-2" style={{ color: 'var(--fg)' }}>
@@ -609,15 +623,20 @@ function DeploymentsContent() {
   const [deps, setDeps] = useState<LiveDeployment[]>([])
   const [teamsData, setTeamsData] = useState<Team[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [expandedDepId, setExpandedDepId] = useState<string | null>(null)
+  const hasAutoExpanded = useRef(false)
   
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<OperationStatus | 'all'>('all')
   const [sevFilter, setSevFilter] = useState<Severity | 'all'>('all')
 
   useEffect(() => {
-    if (authLoading || !user || (user.role !== 'officer' && user.role !== 'admin')) {
+    if (!authLoading && (!user || (user.role !== 'officer' && user.role !== 'admin'))) {
+      router.push('/')
       return
     }
+    
+    if (authLoading) return;
     
     async function loadData() {
       try {
@@ -635,16 +654,36 @@ function DeploymentsContent() {
     }
     loadData()
 
-    // Socket sync (Feature A)
+    // Socket sync
     const socket = io('http://localhost:5000')
+
+    // Patch deployment state (status, assignedTeamIds, etc.)
     socket.on('deployment_updated', (data: { deploymentId: string; update: any }) => {
       setDeps(prev => prev.map(d => d.id === data.deploymentId ? { ...d, ...data.update } : d))
+    })
+
+    // Patch team statuses in local state
+    socket.on('teams_updated', (data: { teamIds: string[]; status: string }) => {
+      setTeamsData(prev => prev.map(t => {
+        const tid = (t.id || t._id).toString()
+        return data.teamIds.includes(tid) ? { ...t, status: data.status as Team['status'] } : t
+      }))
     })
 
     return () => {
       socket.disconnect()
     }
   }, [authLoading, user])
+
+  useEffect(() => {
+    if (alertId && deps.length > 0 && !hasAutoExpanded.current) {
+      const found = deps.find(d => d.alertId === alertId || d.id === alertId)
+      if (found) {
+        setExpandedDepId(found.id)
+        hasAutoExpanded.current = true
+      }
+    }
+  }, [alertId, deps])
 
   const handleUpdate = (id: string, patch: Partial<LiveDeployment>) => {
     setDeps(prev => prev.map(d => d.id === id ? { ...d, ...patch } : d))
@@ -679,7 +718,13 @@ function DeploymentsContent() {
       >
         <div className="flex items-center gap-2">
           <button
-            onClick={() => router.back()}
+            onClick={() => {
+              if (alertId) {
+                router.push('/alerts')
+              } else {
+                router.push('/')
+              }
+            }}
             className="p-1.5 rounded-lg transition-colors mr-1"
             style={{ color: 'var(--fg-muted)' }}
             onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
@@ -770,6 +815,14 @@ function DeploymentsContent() {
               allDeployments={deps}
               allTeams={teamsData}
               onUpdate={handleUpdate}
+              onTeamUpdate={(teamIds, status) => {
+                setTeamsData(prev => prev.map(t => {
+                  const tid = (t.id || t._id).toString()
+                  return teamIds.map(id => id.toString()).includes(tid) ? { ...t, status } : t
+                }))
+              }}
+              expanded={expandedDepId === d.id}
+              onToggle={() => setExpandedDepId(prev => prev === d.id ? null : d.id)}
             />
           ))}
         </div>

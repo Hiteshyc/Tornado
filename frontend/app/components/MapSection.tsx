@@ -47,9 +47,11 @@ function MapAutoScaler({ alerts, isGuest }: { alerts: any[]; isGuest: boolean })
   const map = useMap();
   useEffect(() => {
     if (isGuest && alerts && alerts.length > 0) {
-      const points = alerts.map((a) => [a.lat, a.lng] as L.LatLngTuple);
-      const bounds = L.latLngBounds(points);
-      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 8 });
+      const points = alerts.flatMap((a) => (a.affectedHubs || []).map(h => [h.latitude, h.longitude] as L.LatLngTuple));
+      if (points.length > 0) {
+        const bounds = L.latLngBounds(points);
+        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 8 });
+      }
     }
   }, [alerts, isGuest, map]);
   return null;
@@ -84,7 +86,7 @@ function HazardPopup({ h }: { h: any }) {
       {/* Details */}
       <div className="px-3 py-2.5 space-y-1.5" style={{ background: "var(--bg-card)" }}>
         <div className="grid grid-cols-2 gap-2">
-          <Stat icon={Clock} label="Expected In" value={`${h.expectedHours}h`} color={color} />
+          <Stat icon={Clock} label="Expected In" value={`${h.eta || 0}h`} color={color} />
           <Stat icon={Navigation} label="Distance" value={h.distance ? `${h.distance.toFixed(1)} km` : "N/A"} color={color} />
         </div>
 
@@ -535,32 +537,36 @@ export default function MapSection({ theme, onLocationChange, currentLocation }:
         )}
 
         {/* Render Active Hazards */}
-        {alerts.map((h) => {
-          const distance = userCoords
-            ? getDistance(userCoords[0], userCoords[1], h.lat, h.lng)
-            : null;
-          const isOutside = distance !== null && distance > radius;
-          const updatedAlert = { ...h, distance };
+        {alerts.flatMap((h) => {
+          return (h.affectedHubs || []).map((hub: any, idx: number) => {
+            const lat = hub.latitude;
+            const lng = hub.longitude;
+            const distance = userCoords
+              ? getDistance(userCoords[0], userCoords[1], lat, lng)
+              : null;
+            const isOutside = distance !== null && distance > radius;
+            const updatedAlert = { ...h, distance };
 
-          return (
-            <Marker
-              key={h.id}
-              position={[h.lat, h.lng]}
-              icon={createMarkerIcon(h.severity, isOutside)}
-              eventHandlers={{
-                mouseover: (e) => {
-                  e.target.openPopup();
-                },
-                mouseout: (e) => {
-                  e.target.closePopup();
-                },
-              }}
-            >
-              <Popup maxWidth={280} minWidth={260}>
-                <HazardPopup h={updatedAlert} />
-              </Popup>
-            </Marker>
-          );
+            return (
+              <Marker
+                key={`${h.id}-${idx}`}
+                position={[lat, lng]}
+                icon={createMarkerIcon(h.severity, isOutside)}
+                eventHandlers={{
+                  mouseover: (e) => {
+                    e.target.openPopup();
+                  },
+                  mouseout: (e) => {
+                    e.target.closePopup();
+                  },
+                }}
+              >
+                <Popup maxWidth={280} minWidth={260}>
+                  <HazardPopup h={updatedAlert} />
+                </Popup>
+              </Marker>
+            );
+          });
         })}
       </MapContainer>
 

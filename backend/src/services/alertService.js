@@ -8,7 +8,7 @@ export const alertService = {
 
   async getById(id) {
     const alert = await alertRepository.findById(id);
-    if (!alert || !alert.isActive) {
+    if (!alert || alert.status === "resolved") {
       throw new ApiError(404, "Alert not found");
     }
     return alert;

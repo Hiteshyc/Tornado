@@ -60,11 +60,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           id: a._id || a.id,
           title: a.title,
           severity: a.severity,
-          locationName: a.locationName || (typeof a.location === 'string' ? a.location : ''),
-          location: a.location,
-          lat,
-          lng,
-          expectedHours: a.expectedHours,
+          affectedHubs: a.affectedHubs || [],
+          eta: a.eta || 0,
           action: a.action,
           timestamp: formatRelativeTime(a.createdAt || a.timestamp),
           distance: 8,
@@ -114,7 +111,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     ? {
         status: alerts[0].severity,
         title: `${alerts[0].severity.toUpperCase()} ALERT ACTIVE`,
-        description: `${alerts[0].title} — Expected in ${alerts[0].expectedHours}h`,
+        description: `${alerts[0].title} — Expected in ${alerts[0].eta}h`,
       }
     : {
         status: 'safe',

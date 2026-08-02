@@ -26,11 +26,8 @@ export interface Alert {
   id: number
   title: string
   severity: Severity
-  locationName: string
-  location?: string | { type?: string; coordinates?: number[] }
-  lat: number
-  lng: number
-  expectedHours: number
+  eta: number
+  affectedHubs: Array<{ hubName: string; latitude: number; longitude: number; [key: string]: any }>
   action: string
   timestamp: string
   distance?: number

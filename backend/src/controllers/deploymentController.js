@@ -16,8 +16,8 @@ export const getDeployments = asyncHandler(async (req, res) => {
       alertTitle: d.alertTitle,
       location: d.location,
       severity: d.severity,
-      aiConfidence: d.aiConfidence,
-      windSpeed: d.windSpeed,
+      aiConfidence: d.confidence,
+      windSpeed: d.hazardType,
       assignedTeamIds: d.assignedTeamIds,
       status: d.status,
       startTime: d.startTime,
@@ -41,15 +41,31 @@ export const createDeployment = asyncHandler(async (req, res) => {
     return res.status(200).json({ success: true, deployment: existing });
   }
 
+  // Find 1 random available team
+  const availableTeams = await Team.find({ status: 'available' });
+  let assignedTeamIds = [];
+  if (availableTeams.length > 0) {
+    const randomIndex = Math.floor(Math.random() * availableTeams.length);
+    const randomTeam = availableTeams[randomIndex];
+    assignedTeamIds.push(randomTeam._id);
+    
+    randomTeam.status = 'travelling';
+    await randomTeam.save();
+    
+    if (!alert.deployedTeams) alert.deployedTeams = [];
+    alert.deployedTeams.push(randomTeam._id);
+    await alert.save();
+  }
+
   const deployment = await Deployment.create({
     alertId: alert._id,
     alertTitle: alert.title,
-    location: alert.locationName,
+    location: alert.affectedHubs?.[0]?.hubName || "Unknown",
     severity: alert.severity,
-    aiConfidence: alert.aiConfidence,
-    windSpeed: alert.windSpeed,
-    status: 'pending',
-    assignedTeamIds: [],
+    confidence: alert.confidence,
+    hazardType: alert.hazardType,
+    status: assignedTeamIds.length > 0 ? 'pending' : 'pending',
+    assignedTeamIds: assignedTeamIds,
   });
 
   res.status(201).json({ success: true, deployment });
@@ -59,19 +75,108 @@ export const createDeployment = asyncHandler(async (req, res) => {
 export const updateDeployment = asyncHandler(async (req, res) => {
   const { id } = req.params;
   
+  const oldDeployment = await Deployment.findById(id);
+  if (!oldDeployment) {
+    throw new ApiError(404, "Deployment not found");
+  }
+  
+  const alert = await Alert.findById(oldDeployment.alertId);
+
+  // 1. Handle Assigned Teams logic (New teams added / removed)
+  if (req.body.assignedTeamIds) {
+    const oldIds = oldDeployment.assignedTeamIds.map(id => id.toString());
+    const newIds = req.body.assignedTeamIds.map(id => id.toString());
+    
+    // Find newly added teams
+    const addedIds = newIds.filter(id => !oldIds.includes(id));
+    if (addedIds.length > 0) {
+      await Team.updateMany(
+        { _id: { $in: addedIds } },
+        { $set: { status: 'travelling' } }
+      );
+      if (alert) {
+        if (!alert.deployedTeams) alert.deployedTeams = [];
+        addedIds.forEach(id => {
+          if (!alert.deployedTeams.includes(id)) {
+            alert.deployedTeams.push(id);
+          }
+        });
+      }
+    }
+    
+    // Find removed teams (if any, e.g. relocation)
+    const removedIds = oldIds.filter(id => !newIds.includes(id));
+    if (removedIds.length > 0) {
+      await Team.updateMany(
+        { _id: { $in: removedIds } },
+        { $set: { status: 'available' } }
+      );
+      if (alert && alert.deployedTeams) {
+        alert.deployedTeams = alert.deployedTeams.filter(id => !removedIds.includes(id.toString()));
+      }
+    }
+  }
+
+  // 2. Handle Status changes
+  if (req.body.status && req.body.status !== oldDeployment.status) {
+    const activeTeamIds = req.body.assignedTeamIds || oldDeployment.assignedTeamIds;
+    
+    if (req.body.status === 'rescue-ongoing') {
+      // Mark all assigned teams as on-mission
+      await Team.updateMany(
+        { _id: { $in: activeTeamIds } },
+        { $set: { status: 'on-mission' } }
+      );
+    } else if (req.body.status === 'completed' || req.body.status === 'failed') {
+      // Free all teams
+      await Team.updateMany(
+        { _id: { $in: activeTeamIds } },
+        { $set: { status: 'available' } }
+      );
+      // Decrement the alert deployed teams count
+      if (alert && alert.deployedTeams) {
+        alert.deployedTeams = alert.deployedTeams.filter(id => !activeTeamIds.includes(id.toString()));
+      }
+    }
+  }
+  
+  if (alert) await alert.save();
+
   const deployment = await Deployment.findByIdAndUpdate(
     id,
     { $set: req.body },
     { new: true, runValidators: true }
   );
 
-  if (!deployment) {
-    throw new ApiError(404, "Deployment not found");
-  }
-
-  // Emit socket event
+  // Emit socket events
   import("../services/socket.js").then(({ getIO }) => {
-    getIO().emit("deployment_updated", { deploymentId: id, update: req.body });
+    const io = getIO();
+
+    // Always broadcast the deployment patch
+    io.emit("deployment_updated", { deploymentId: id, update: req.body });
+
+    // Broadcast team status changes so other pages (e.g. /team-management) update
+    if (req.body.assignedTeamIds) {
+      const oldIds = oldDeployment.assignedTeamIds.map(id => id.toString());
+      const newIds = req.body.assignedTeamIds.map(id => id.toString());
+      const addedIds = newIds.filter(id => !oldIds.includes(id));
+      const removedIds = oldIds.filter(id => !newIds.includes(id));
+      if (addedIds.length > 0) {
+        io.emit("teams_updated", { teamIds: addedIds, status: 'travelling' });
+      }
+      if (removedIds.length > 0) {
+        io.emit("teams_updated", { teamIds: removedIds, status: 'available' });
+      }
+    }
+
+    if (req.body.status && req.body.status !== oldDeployment.status) {
+      const activeTeamIds = (req.body.assignedTeamIds || oldDeployment.assignedTeamIds).map(id => id.toString());
+      if (req.body.status === 'rescue-ongoing') {
+        io.emit("teams_updated", { teamIds: activeTeamIds, status: 'on-mission' });
+      } else if (req.body.status === 'completed' || req.body.status === 'failed') {
+        io.emit("teams_updated", { teamIds: activeTeamIds, status: 'available' });
+      }
+    }
   }).catch(err => console.error(err));
 
   res.status(200).json({ success: true, deployment });
