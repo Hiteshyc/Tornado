@@ -11,10 +11,9 @@ import {
 import {
   OPERATION_STATUSES, STATUS_LABEL, STATUS_COLOR,
   TEAM_STATUS_COLOR, TEAM_STATUS_LABEL,
-  type OperationStatus,
-} from '../data/officerData'
+} from '../constants/uiConstants'
 import { SEVERITY_HEX, SEVERITY_LABEL } from '../types'
-import type { Severity, Team } from '../types'
+import type { Severity, Team, OperationStatus } from '../types'
 import { fetchDeployments, updateDeployment } from '../api/deploymentApi'
 import { fetchTeams } from '../api/teamApi'
 import { useAuth } from '../context/AuthContext'

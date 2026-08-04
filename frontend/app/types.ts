@@ -89,3 +89,59 @@ export interface Team {
   previousMission: string
   assignedDeploymentId?: string
 }
+
+export type OperationStatus = 'pending' | 'assigned' | 'en-route' | 'travelling' | 'reached' | 'rescue-ongoing' | 'returning' | 'completed' | 'failed'
+
+export interface MissionReport {
+  teamLead: string
+  completionTime: string
+  peopleRescued: number
+  resourcesUsed: string[]
+  remarks: string
+  submittedAt: string
+}
+
+export interface Deployment {
+  id: string
+  alertTitle: string
+  alertType: string
+  location: string
+  district: string
+  severity: Severity
+  status: OperationStatus
+  startTime: string
+  assignedTeamIds: string[]
+  population: number
+  aiConfidence: number
+  windSpeed: number
+  missionReport?: MissionReport
+}
+
+export interface OfficerAlertHub {
+  hubId: string
+  hubName: string
+  latitude: number
+  longitude: number
+  priority: number
+  estimatedPopulation: number
+  requiredRescueCapacity: number
+  requiredResources: string[]
+}
+
+export interface OfficerAlert {
+  id: string
+  title: string
+  hazardType: string
+  severity: Severity
+  confidence: number
+  status: string
+  eta: number
+  affectedHubs: OfficerAlertHub[]
+  reportId?: string
+  reportUrl?: string
+  deploymentStatus: string
+  deployedTeams: number
+  action: string
+  createdByAI: boolean
+  timestamp: string
+}

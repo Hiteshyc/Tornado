@@ -10,7 +10,7 @@ import { SEVERITY_HEX, SEVERITY_LABEL } from '../types'
 import { useAuth } from '../context/AuthContext'
 import { fetchAlerts, resolveAlert } from '../api/alertApi'
 import { createDeployment } from '../api/deploymentApi'
-import type { OfficerAlert } from '../data/officerData'
+import type { OfficerAlert } from '../types'
 import { DotLottieReact } from '@lottiefiles/dotlottie-react'
 
 const AlertMap = dynamic(() => import('../components/AlertMap'), { ssr: false, loading: () => <div className="w-full h-full bg-slate-900 animate-pulse rounded-xl border border-slate-800" /> })

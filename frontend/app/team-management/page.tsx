@@ -7,7 +7,7 @@ import {
   Search, ChevronDown, ChevronUp, Users, CheckCircle2,
   AlertCircle, WifiOff, Truck, MapPin, Layers, Radio, List, Map, Send, MessageSquare
 } from 'lucide-react'
-import { TEAM_STATUS_COLOR, TEAM_STATUS_LABEL } from '../data/officerData'
+import { TEAM_STATUS_COLOR, TEAM_STATUS_LABEL } from '../constants/uiConstants'
 import type { Team, TeamStatus, VehicleType } from '../types'
 import { fetchTeams, sendMessage } from '../api/teamApi'
 

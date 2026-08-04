@@ -1,4 +1,4 @@
-import type { OfficerAlert } from '../data/officerData' // We'll update types later, but for now reuse the type
+import type { OfficerAlert } from '../types'
 
 const API_BASE = 'http://localhost:5000/api'
 

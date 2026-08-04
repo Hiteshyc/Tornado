@@ -5,7 +5,7 @@ import { MapContainer, TileLayer, Marker, Popup, Tooltip } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 import type { Team, TeamStatus } from '../types'
-import { TEAM_STATUS_COLOR, TEAM_STATUS_LABEL } from '../data/officerData'
+import { TEAM_STATUS_COLOR, TEAM_STATUS_LABEL } from '../constants/uiConstants'
 
 // Fix missing marker icons in React-Leaflet
 const createIcon = (color: string) => {

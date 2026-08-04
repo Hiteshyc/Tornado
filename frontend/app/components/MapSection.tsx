@@ -8,7 +8,7 @@ import { Search, Plus, Minus, Crosshair, X, Wind, Droplets, Clock, Navigation } 
 import type { Severity, LocationState } from "../types";
 import type { Theme } from "../context/ThemeContext";
 import { SEVERITY_HEX, SEVERITY_LABEL } from "../types";
-import { coastalLocations } from "../data/mockData";
+import { coastalLocations } from "../constants/locations";
 import { getNationalAlerts } from "../libs/api";
 import { useAuth } from "../context/AuthContext";
 import WeatherWidget from "./WeatherWidget";

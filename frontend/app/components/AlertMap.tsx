@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { MapContainer, TileLayer, Circle, Popup, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
-import type { OfficerAlert } from '../data/officerData'
+import type { OfficerAlert } from '../types'
 import { SEVERITY_HEX, SEVERITY_LABEL } from '../types'
 
 // Fix default icons for Leaflet in Next.js
